@@ -105,16 +105,12 @@ def run_poll_loop(agent: EmailAgent, channel: EmailChannel, poll_interval: int) 
             messages = channel.fetch_unread_messages()
 
             for msg in messages:
-                logger.info(
-                    "Processing message from %s (thread: %s)",
-                    msg["from"],
-                    msg["thread_id"],
-                )
+                logger.info("Processing message from %s", msg["from"])
                 try:
                     reply = agent.process_message(
-                        conversation_id=msg["thread_id"],
                         parent_email=msg["from"],
                         message_text=msg["body"],
+                        inbound_message_id=msg["message_id"],
                     )
                     if reply:
                         channel.send_reply(

@@ -1,4 +1,4 @@
-"""Conversation state model — persisted per email thread."""
+"""Conversation state model — persisted per sender email address."""
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -20,7 +20,7 @@ class ChatMessage:
 
 @dataclass
 class ConversationState:
-    conversation_id: str
+    conversation_id: str                           # normalized sender email address
     language: str = "de"                           # "de" or "en"
     flow_step: str = "greeting"                    # current step in registration flow
     registration: RegistrationData = field(default_factory=RegistrationData)
@@ -32,6 +32,9 @@ class ConversationState:
     last_activity: str = field(default_factory=_now)
     completed: bool = False
     reminder_count: int = 0
+    # Most recent inbound Message-ID — used for reply threading headers only,
+    # NOT for conversation matching (which is always by email address).
+    last_inbound_message_id: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -50,6 +53,7 @@ class ConversationState:
             "last_activity": self.last_activity,
             "completed": self.completed,
             "reminder_count": self.reminder_count,
+            "last_inbound_message_id": self.last_inbound_message_id,
         }
 
     @classmethod
@@ -73,4 +77,5 @@ class ConversationState:
         state.last_activity = data.get("last_activity", "")
         state.completed = data.get("completed", False)
         state.reminder_count = data.get("reminder_count", 0)
+        state.last_inbound_message_id = data.get("last_inbound_message_id", "")
         return state

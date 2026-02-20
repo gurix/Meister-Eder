@@ -2,9 +2,14 @@
 
 Handles:
 - Polling the inbox for unread messages (IMAP)
-- Thread tracking via Message-ID / In-Reply-To / References headers
-- Sending reply emails (SMTP) with proper threading headers
+- Conversation matching by sender email address (NOT by thread headers)
+- Sending reply emails (SMTP) with proper threading headers for email clients
 - Stripping quoted reply text so the agent only sees the new content
+
+Threading headers (Message-ID, In-Reply-To, References) are preserved for
+outbound replies so messages appear threaded in Gmail/Outlook, but they are
+NOT used to identify which conversation an incoming message belongs to.
+Conversation matching is exclusively by normalized sender email address.
 """
 
 import email
@@ -126,13 +131,15 @@ class EmailChannel:
         """Poll the inbox and return all unread messages as structured dicts.
 
         Each dict contains:
-            from          — sender email address
+            from          — sender email address (use this as conversation key)
             subject       — decoded subject line
-            message_id    — Message-ID header of this email
-            in_reply_to   — In-Reply-To header (may be empty)
-            references    — References header (may be empty)
-            thread_id     — canonical ID for the email thread
+            message_id    — Message-ID of this inbound email (for reply threading)
+            in_reply_to   — In-Reply-To header (for reply threading, may be empty)
+            references    — References header (for reply threading, may be empty)
             body          — stripped plain-text body (quoted text removed)
+
+        Note: ``thread_id`` is no longer returned. Conversation matching is done
+        by ``from`` (sender email address), not by threading headers.
         """
         messages: list[dict] = []
         try:
@@ -161,8 +168,6 @@ class EmailChannel:
                         imap.store(num, "+FLAGS", "\\Seen")
                         continue
 
-                    thread_id = self._resolve_thread_id(message_id, in_reply_to, references)
-
                     messages.append(
                         {
                             "from": from_addr,
@@ -170,7 +175,6 @@ class EmailChannel:
                             "message_id": message_id,
                             "in_reply_to": in_reply_to,
                             "references": references,
-                            "thread_id": thread_id,
                             "body": body,
                         }
                     )
@@ -274,16 +278,3 @@ class EmailChannel:
         conn.login(self._username, self._password)
         return conn
 
-    @staticmethod
-    def _resolve_thread_id(message_id: str, in_reply_to: str, references: str) -> str:
-        """Determine the canonical thread ID from email threading headers.
-
-        The root of the thread is the first message ever sent — its ID is the
-        first token in the References header (oldest first convention).
-        """
-        if references:
-            first_ref = references.strip().split()[0]
-            return first_ref
-        if in_reply_to:
-            return in_reply_to.strip()
-        return message_id.strip() or f"<unknown-{time.time():.0f}>"

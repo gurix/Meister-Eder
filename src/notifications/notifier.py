@@ -1,4 +1,4 @@
-"""Admin email notifications sent when a registration is completed."""
+"""Admin email notifications — new registrations and registration updates."""
 
 import logging
 import smtplib
@@ -17,11 +17,13 @@ _ADMIN_CC_EMAIL = "spielgruppen@familien-verein.ch"
 
 
 class AdminNotifier:
-    """Sends formatted admin notification emails upon registration completion.
+    """Sends formatted admin notification emails.
 
-    The SMTP credentials are re-used from the agent's outbound email config.
-    When *smtp_host* is empty the notifier logs the notification and skips
-    sending (useful for local development / testing).
+    Handles two notification types:
+    - New registration completed  → "New Registration: …"
+    - Existing registration updated → "Registration Updated: …" (with field diff)
+
+    When *smtp_host* is empty the notifier logs and skips sending (dev mode).
     """
 
     def __init__(
@@ -48,23 +50,42 @@ class AdminNotifier:
         self,
         registration: RegistrationData,
         registration_id: str,
+        version: int,
         conversation_id: str,
         channel: str,
     ) -> None:
-        """Send notification email(s) for a completed registration."""
+        """Send notification for a newly completed registration (version 1)."""
         types = registration.booking.playgroup_types
-
-        to_addresses: list[str] = []
-        if "indoor" in types:
-            to_addresses.append(_INDOOR_EMAIL)
-        if "outdoor" in types:
-            to_addresses.append(_OUTDOOR_EMAIL)
+        to_addresses = self._recipients_for(types)
 
         subject = (
             f"New Registration: {registration.child.full_name} "
             f"for {self._format_types(types)}"
         )
-        body = self._build_body(registration, registration_id, channel)
+        body = self._build_new_body(registration, registration_id, version, channel)
+
+        self._send(
+            to=to_addresses,
+            cc=[_ADMIN_CC_EMAIL],
+            subject=subject,
+            body=body,
+            reply_to=registration.parent_guardian.email or "",
+        )
+
+    def notify_registration_update(
+        self,
+        registration: RegistrationData,
+        registration_id: str,
+        version: int,
+        change_summary: dict,
+        conversation_id: str,
+    ) -> None:
+        """Send notification when an existing registration is updated."""
+        types = registration.booking.playgroup_types
+        to_addresses = self._recipients_for(types)
+
+        subject = f"Registration Updated: {registration.child.full_name}"
+        body = self._build_update_body(registration, registration_id, version, change_summary)
 
         self._send(
             to=to_addresses,
@@ -77,6 +98,15 @@ class AdminNotifier:
     # ------------------------------------------------------------------
     # Formatting helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _recipients_for(types: list[str]) -> list[str]:
+        recipients = []
+        if "indoor" in types:
+            recipients.append(_INDOOR_EMAIL)
+        if "outdoor" in types:
+            recipients.append(_OUTDOOR_EMAIL)
+        return recipients
 
     @staticmethod
     def _format_types(types: list[str]) -> str:
@@ -127,20 +157,32 @@ class AdminNotifier:
 
     @staticmethod
     def _format_days(registration: RegistrationData) -> str:
-        day_map = {
-            "monday": "Monday",
-            "wednesday": "Wednesday",
-            "thursday": "Thursday",
-        }
+        day_map = {"monday": "Monday", "wednesday": "Wednesday", "thursday": "Thursday"}
         return ", ".join(
             f"{day_map.get(d.day, d.day.capitalize())} ({d.type})"
             for d in registration.booking.selected_days
         )
 
-    def _build_body(
+    @staticmethod
+    def _format_change_summary(change_summary: dict) -> str:
+        """Render field changes as a human-readable list."""
+        lines = []
+        for field_path, values in sorted(change_summary.items()):
+            old_val, new_val = values["old"], values["new"]
+            lines.append(f"  {field_path}:")
+            lines.append(f"    Old: {old_val}")
+            lines.append(f"    New: {new_val}")
+        return "\n".join(lines) if lines else "  (no changes detected)"
+
+    # ------------------------------------------------------------------
+    # Email body builders
+    # ------------------------------------------------------------------
+
+    def _build_new_body(
         self,
         registration: RegistrationData,
         registration_id: str,
+        version: int,
         channel: str,
     ) -> str:
         now = datetime.utcnow()
@@ -154,7 +196,7 @@ class AdminNotifier:
             "\n"
             f"Submitted:       {now.strftime('%d.%m.%Y')} at {now.strftime('%H:%M')} UTC\n"
             f"Channel:         {channel.title()}\n"
-            f"Registration ID: {registration_id}\n"
+            f"Registration ID: {registration_id}  (Version {version})\n"
             "\n"
             "-----------------------------------------------\n"
             "CHILD INFORMATION\n"
@@ -191,6 +233,47 @@ class AdminNotifier:
             "===============================================\n"
             "\n"
             "This registration was submitted via the automated registration assistant.\n"
+        )
+
+    def _build_update_body(
+        self,
+        registration: RegistrationData,
+        registration_id: str,
+        version: int,
+        change_summary: dict,
+    ) -> str:
+        now = datetime.utcnow()
+        pg = registration.parent_guardian
+
+        return (
+            "===============================================\n"
+            "REGISTRATION UPDATE\n"
+            "===============================================\n"
+            "\n"
+            f"Updated:         {now.strftime('%d.%m.%Y')} at {now.strftime('%H:%M')} UTC\n"
+            f"Registration ID: {registration_id}  (Version {version})\n"
+            f"Child:           {registration.child.full_name}\n"
+            f"Parent Email:    {pg.email}\n"
+            "\n"
+            "-----------------------------------------------\n"
+            "WHAT CHANGED\n"
+            "-----------------------------------------------\n"
+            f"{self._format_change_summary(change_summary)}\n"
+            "\n"
+            "-----------------------------------------------\n"
+            "CURRENT REGISTRATION (after update)\n"
+            "-----------------------------------------------\n"
+            f"Playgroup:       {self._format_types(registration.booking.playgroup_types)}\n"
+            f"Days:            {self._format_days(registration)}\n"
+            f"Monthly Fee:     {self._calculate_monthly_fee(registration)}\n"
+            "\n"
+            f"Parent:          {pg.full_name}\n"
+            f"Address:         {pg.street_address}, {pg.postal_code} {pg.city}\n"
+            f"Phone:           {pg.phone}\n"
+            "\n"
+            "===============================================\n"
+            "\n"
+            "This update was submitted via the automated registration assistant.\n"
         )
 
     # ------------------------------------------------------------------
@@ -236,6 +319,6 @@ class AdminNotifier:
             server.login(self._username, self._password)
             server.sendmail(self._from_email, all_recipients, msg.as_string())
             server.quit()
-            logger.info("Admin notification sent to %s", all_recipients)
+            logger.info("Notification sent to %s", all_recipients)
         except Exception:
-            logger.exception("Failed to send admin notification to %s", all_recipients)
+            logger.exception("Failed to send notification to %s", all_recipients)
