@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PlaygroupRegistration",
+  "description": "Schema for playgroup child registration data",
+  "type": "object",
+  "required": [
+    "child",
+    "parentGuardian",
+    "emergencyContact",
+    "booking",
+    "metadata"
+  ],
+  "properties": {
+    "child": {
+      "type": "object",
+      "required": ["fullName", "dateOfBirth", "specialNeeds"],
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "description": "Child's full name (first and last)"
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "format": "date",
+          "description": "Child's date of birth (YYYY-MM-DD)"
+        },
+        "specialNeeds": {
+          "type": "string",
+          "description": "Special needs, medical conditions, allergies, or 'None'"
+        }
+      }
+    },
+    "parentGuardian": {
+      "type": "object",
+      "required": ["fullName", "streetAddress", "postalCode", "city", "phone", "email"],
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "description": "Parent/guardian full name"
+        },
+        "streetAddress": {
+          "type": "string",
+          "description": "Street name and house number"
+        },
+        "postalCode": {
+          "type": "string",
+          "pattern": "^[0-9]{4}$",
+          "description": "Swiss postal code (4 digits)"
+        },
+        "city": {
+          "type": "string",
+          "description": "City/town name"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Contact email address"
+        }
+      }
+    },
+    "emergencyContact": {
+      "type": "object",
+      "required": ["fullName", "phone"],
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "description": "Emergency contact full name"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Emergency contact phone number"
+        }
+      }
+    },
+    "booking": {
+      "type": "object",
+      "required": ["playgroupTypes", "selectedDays"],
+      "properties": {
+        "playgroupTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["indoor", "outdoor"]
+          },
+          "minItems": 1,
+          "description": "Selected playgroup type(s)"
+        },
+        "selectedDays": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["day", "type"],
+            "properties": {
+              "day": {
+                "type": "string",
+                "enum": ["monday", "wednesday", "thursday"]
+              },
+              "type": {
+                "type": "string",
+                "enum": ["indoor", "outdoor"]
+              }
+            }
+          },
+          "minItems": 1,
+          "description": "Selected booking days with playgroup type"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["submittedAt", "channel"],
+      "properties": {
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Registration submission timestamp"
+        },
+        "channel": {
+          "type": "string",
+          "enum": ["email", "chat"],
+          "description": "Channel through which registration was completed"
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "Unique identifier for the registration conversation"
+        }
+      }
+    }
+  }
+}
