@@ -1,0 +1,9 @@
+# Core — at least one AI provider SDK is required
+anthropic>=0.40.0
+openai>=1.50.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Registration schema validation
+jsonschema>=4.23.0
