@@ -90,7 +90,8 @@ Rules:
 - Dates must be YYYY-MM-DD. Postal codes must be exactly 4 digits.
 - Valid days: "monday", "wednesday", "thursday" (indoor) or "monday" (outdoor).
 - `language` must be "de" or "en" based on the parent's message.
-- The `reply` field must be natural, friendly, conversational text — not JSON and not a list of fields."""
+- The `reply` field must be natural, friendly, conversational text — not JSON and not a list of fields.
+- The `reply` field must be plain text only. No markdown: no **bold**, no _italic_, no # headers, no bullet points with - or *, no backticks. Use plain sentences and line breaks only."""
 
 _POST_COMPLETION_RESPONSE_FORMAT = """## CRITICAL: Response Format
 
@@ -129,6 +130,7 @@ Rules:
 - Use `null` for all `updates` fields when intent is `"question"` or `"new_child"`.
 - `language` must be "de" or "en" based on the parent's message.
 - The `reply` field must be natural, friendly, conversational text — not JSON and not a list of fields.
+- The `reply` field must be plain text only. No markdown: no **bold**, no _italic_, no # headers, no bullet points with - or *, no backticks. Use plain sentences and line breaks only.
 - If you are unsure of the parent's intent, ask a clarifying question and set intent to `"question"`."""
 
 
