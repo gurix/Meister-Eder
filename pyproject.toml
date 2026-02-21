@@ -4,10 +4,8 @@ version = "0.1.0"
 description = "AI-powered conversational registration agent for Spielgruppe Pumuckl"
 requires-python = ">=3.13"
 dependencies = [
-    # At least one AI provider SDK is required; both are included so the
-    # operator can choose at runtime via the AI_PROVIDER env variable.
-    "anthropic>=0.40.0",
-    "openai>=1.50.0",
+    # LLM access — supports any provider (Anthropic, OpenAI, Gemini, …)
+    "litellm>=1.0.0",
     # Configuration
     "python-dotenv>=1.0.0",
     # Registration schema validation

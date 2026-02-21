@@ -11,10 +11,9 @@ The agent polls the configured IMAP inbox every POLL_INTERVAL seconds,
 processes new messages, and replies via SMTP.
 
 Environment variables (see .env.example for full list):
-  AI_PROVIDER          anthropic | openai   (default: anthropic)
-  AI_MODEL             Model name override  (default: provider default)
-  ANTHROPIC_API_KEY    Required if AI_PROVIDER=anthropic
-  OPENAI_API_KEY       Required if AI_PROVIDER=openai
+  AI_MODEL             litellm model string  (default: anthropic/claude-opus-4-6)
+  ANTHROPIC_API_KEY    Required for Anthropic models
+  OPENAI_API_KEY       Required for OpenAI models
   IMAP_HOST            IMAP server hostname
   IMAP_PORT            IMAP port             (default: 993)
   IMAP_USERNAME        Email account username
@@ -35,7 +34,6 @@ from src.channels.email_channel import EmailChannel
 from src.config import Config
 from src.knowledge_base.loader import KnowledgeBase
 from src.notifications.notifier import AdminNotifier
-from src.providers import create_provider
 from src.storage.json_store import ConversationStore
 
 logging.basicConfig(
@@ -48,24 +46,7 @@ logger = logging.getLogger(__name__)
 
 def build_components(config: Config):
     """Instantiate and wire together all agent components."""
-
-    # Resolve API key for the chosen provider
-    if config.ai_provider == "anthropic":
-        if not config.anthropic_api_key:
-            logger.error("ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic")
-            sys.exit(1)
-        api_key = config.anthropic_api_key
-    elif config.ai_provider == "openai":
-        if not config.openai_api_key:
-            logger.error("OPENAI_API_KEY is required when AI_PROVIDER=openai")
-            sys.exit(1)
-        api_key = config.openai_api_key
-    else:
-        logger.error("Unknown AI_PROVIDER '%s'. Choose 'anthropic' or 'openai'.", config.ai_provider)
-        sys.exit(1)
-
-    provider = create_provider(config.ai_provider, api_key, config.ai_model)
-    logger.info("AI provider: %s / model: %s", config.ai_provider, provider.model_name)
+    logger.info("AI model: %s", config.ai_model)
 
     kb = KnowledgeBase(config.knowledge_base_dir)
     store = ConversationStore(config.data_dir)
@@ -79,7 +60,7 @@ def build_components(config: Config):
         from_email=config.registration_email,
     )
 
-    agent = EmailAgent(provider=provider, kb=kb, store=store, notifier=notifier)
+    agent = EmailAgent(model=config.ai_model, kb=kb, store=store, notifier=notifier)
 
     channel = EmailChannel(
         imap_host=config.imap_host,

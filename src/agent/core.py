@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from ..models.conversation import ConversationState, ChatMessage
 from ..models.registration import BookingDay, RegistrationData
-from ..providers.base import LLMProvider, LLMMessage
+from .. import llm
 from ..knowledge_base.loader import KnowledgeBase
 from ..storage.json_store import ConversationStore, normalize_email, _diff_registrations
 from ..notifications.notifier import AdminNotifier
@@ -28,12 +28,12 @@ class EmailAgent:
 
     def __init__(
         self,
-        provider: LLMProvider,
+        model: str,
         kb: KnowledgeBase,
         store: ConversationStore,
         notifier: AdminNotifier,
     ) -> None:
-        self._provider = provider
+        self._model = model
         self._kb = kb
         self._store = store
         self._notifier = notifier
@@ -97,11 +97,10 @@ class EmailAgent:
     def _handle_registration(self, state: ConversationState) -> str:
         """Drive the in-progress registration conversation."""
         system = build_system_prompt(self._kb, state)
-        llm_messages = [LLMMessage(role=m.role, content=m.content) for m in state.messages]
 
         try:
-            response = self._provider.complete(system=system, messages=llm_messages)
-            parsed = self._parse_llm_response(response.content)
+            content = llm.complete(self._model, system, state.messages)
+            parsed = self._parse_llm_response(content)
         except Exception:
             logger.exception("LLM call failed for %s", state.conversation_id)
             return self._fallback_message(state)
@@ -140,11 +139,10 @@ class EmailAgent:
     def _handle_post_completion(self, state: ConversationState) -> str:
         """Handle messages received after a registration is already complete."""
         system = build_system_prompt(self._kb, state)
-        llm_messages = [LLMMessage(role=m.role, content=m.content) for m in state.messages]
 
         try:
-            response = self._provider.complete(system=system, messages=llm_messages)
-            parsed = self._parse_llm_response(response.content)
+            content = llm.complete(self._model, system, state.messages)
+            parsed = self._parse_llm_response(content)
         except Exception:
             logger.exception("LLM call failed (post-completion) for %s", state.conversation_id)
             return self._fallback_message(state)

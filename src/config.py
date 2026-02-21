@@ -13,11 +13,9 @@ except ImportError:
 
 @dataclass
 class Config:
-    # AI Provider
-    ai_provider: str = "anthropic"  # "anthropic" or "openai"
-    ai_model: str = ""
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
+    # AI model — litellm format, e.g. "anthropic/claude-opus-4-6" or "openai/gpt-4o".
+    # The matching API key must be set as an env var (ANTHROPIC_API_KEY, OPENAI_API_KEY, …).
+    ai_model: str = "anthropic/claude-opus-4-6"
 
     # Email — IMAP (receiving)
     imap_host: str = ""
@@ -48,10 +46,7 @@ class Config:
     @classmethod
     def from_env(cls) -> "Config":
         return cls(
-            ai_provider=os.getenv("AI_PROVIDER", "anthropic"),
-            ai_model=os.getenv("AI_MODEL", ""),
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+            ai_model=os.getenv("AI_MODEL", "anthropic/claude-opus-4-6"),
             imap_host=os.getenv("IMAP_HOST", ""),
             imap_port=int(os.getenv("IMAP_PORT", "993")),
             imap_username=os.getenv("IMAP_USERNAME", ""),
