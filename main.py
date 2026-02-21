@@ -88,9 +88,17 @@ def run_poll_loop(agent: EmailAgent, channel: EmailChannel, poll_interval: int) 
             for msg in messages:
                 logger.info("Processing message from %s", msg["from"])
                 try:
+                    # Prepend email headers so the LLM can extract the
+                    # sender's address and subject (e.g. to fill in
+                    # parentGuardian.email automatically).
+                    message_text = (
+                        f"Von: {msg['from']}\n"
+                        f"Betreff: {msg['subject']}\n\n"
+                        f"{msg['body']}"
+                    )
                     reply = agent.process_message(
                         parent_email=msg["from"],
-                        message_text=msg["body"],
+                        message_text=message_text,
                         inbound_message_id=msg["message_id"],
                     )
                     if reply:
