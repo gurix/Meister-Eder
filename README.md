@@ -10,7 +10,7 @@ Replaces a static Google Forms workflow with an AI agent that guides parents thr
 - Answers questions about fees, schedule, and policies from a curated knowledge base
 - Validates and stores completed registrations as structured data
 - Notifies playgroup administrators on completion, routed by playgroup type
-- Supports German and English; defaults to German
+- Responds in any language the parent uses; defaults to German
 
 ## Channels
 
@@ -45,13 +45,13 @@ cp .env.example .env
 | Variable | Description |
 |---|---|
 | `AI_MODEL` | litellm model string, e.g. `anthropic/claude-opus-4-6` or `openai/gpt-4o` |
-| `ANTHROPIC_API_KEY` | API key for Anthropic models |
-| `OPENAI_API_KEY` | API key for OpenAI models (if using OpenAI) |
 | `IMAP_HOST` | IMAP server hostname for receiving parent emails |
 | `IMAP_USERNAME` | Email account username |
 | `IMAP_PASSWORD` | Email account password |
 | `SMTP_HOST` | SMTP server hostname for sending replies |
 | `REGISTRATION_EMAIL` | Sender address shown to parents |
+
+The API key variable depends on your chosen provider — see [Switching AI providers](#switching-ai-providers) below.
 
 ### Optional variables
 
