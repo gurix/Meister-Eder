@@ -59,8 +59,8 @@ class AdminNotifier:
         to_addresses = self._recipients_for(types)
 
         subject = (
-            f"New Registration: {registration.child.full_name} "
-            f"for {self._format_types(types)}"
+            f"Neue Anmeldung: {registration.child.full_name} "
+            f"– {self._format_types(types)}"
         )
         body = self._build_new_body(registration, registration_id, version, channel)
 
@@ -84,7 +84,7 @@ class AdminNotifier:
         types = registration.booking.playgroup_types
         to_addresses = self._recipients_for(types)
 
-        subject = f"Registration Updated: {registration.child.full_name}"
+        subject = f"Anmeldung aktualisiert: {registration.child.full_name}"
         body = self._build_update_body(registration, registration_id, version, change_summary)
 
         self._send(
@@ -113,12 +113,12 @@ class AdminNotifier:
         has_indoor = "indoor" in types
         has_outdoor = "outdoor" in types
         if has_indoor and has_outdoor:
-            return "Indoor + Outdoor Playgroup"
+            return "Innen- und Waldspielgruppe"
         if has_indoor:
-            return "Indoor Playgroup"
+            return "Innenspielgruppe"
         if has_outdoor:
-            return "Outdoor Playgroup"
-        return "Playgroup"
+            return "Waldspielgruppe"
+        return "Spielgruppe"
 
     @staticmethod
     def _calculate_age(dob_str: str) -> str:
@@ -129,7 +129,7 @@ class AdminNotifier:
                 (today.month, today.day) < (dob.month, dob.day)
             )
             months = (today.month - dob.month) % 12
-            return f"{years} years, {months} months"
+            return f"{years} Jahre, {months} Monate"
         except Exception:
             return dob_str
 
@@ -157,9 +157,10 @@ class AdminNotifier:
 
     @staticmethod
     def _format_days(registration: RegistrationData) -> str:
-        day_map = {"monday": "Monday", "wednesday": "Wednesday", "thursday": "Thursday"}
+        day_map = {"monday": "Montag", "wednesday": "Mittwoch", "thursday": "Donnerstag"}
+        type_map = {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"}
         return ", ".join(
-            f"{day_map.get(d.day, d.day.capitalize())} ({d.type})"
+            f"{day_map.get(d.day, d.day.capitalize())} ({type_map.get(d.type, d.type)})"
             for d in registration.booking.selected_days
         )
 
@@ -170,9 +171,9 @@ class AdminNotifier:
         for field_path, values in sorted(change_summary.items()):
             old_val, new_val = values["old"], values["new"]
             lines.append(f"  {field_path}:")
-            lines.append(f"    Old: {old_val}")
-            lines.append(f"    New: {new_val}")
-        return "\n".join(lines) if lines else "  (no changes detected)"
+            lines.append(f"    Alt: {old_val}")
+            lines.append(f"    Neu: {new_val}")
+        return "\n".join(lines) if lines else "  (keine Änderungen erkannt)"
 
     # ------------------------------------------------------------------
     # Email body builders
@@ -188,51 +189,52 @@ class AdminNotifier:
         now = datetime.utcnow()
         pg = registration.parent_guardian
         ec = registration.emergency_contact
+        channel_de = {"email": "E-Mail", "chat": "Chat"}.get(channel.lower(), channel.title())
 
         return (
             "===============================================\n"
-            "NEW PLAYGROUP REGISTRATION\n"
+            "NEUE SPIELGRUPPEN-ANMELDUNG\n"
             "===============================================\n"
             "\n"
-            f"Submitted:       {now.strftime('%d.%m.%Y')} at {now.strftime('%H:%M')} UTC\n"
-            f"Channel:         {channel.title()}\n"
-            f"Registration ID: {registration_id}  (Version {version})\n"
+            f"Eingereicht:     {now.strftime('%d.%m.%Y')} um {now.strftime('%H:%M')} Uhr (UTC)\n"
+            f"Kanal:           {channel_de}\n"
+            f"Anmelde-ID:      {registration_id}  (Version {version})\n"
             "\n"
             "-----------------------------------------------\n"
-            "CHILD INFORMATION\n"
+            "ANGABEN ZUM KIND\n"
             "-----------------------------------------------\n"
             f"Name:            {registration.child.full_name}\n"
-            f"Date of Birth:   {self._format_dob(registration.child.date_of_birth or '')} "
-            f"(Age: {self._calculate_age(registration.child.date_of_birth or '')})\n"
-            f"Special Needs:   {registration.child.special_needs or 'None'}\n"
+            f"Geburtsdatum:    {self._format_dob(registration.child.date_of_birth or '')} "
+            f"(Alter: {self._calculate_age(registration.child.date_of_birth or '')})\n"
+            f"Bes. Bedürfnisse: {registration.child.special_needs or 'Keine'}\n"
             "\n"
             "-----------------------------------------------\n"
-            "PLAYGROUP SELECTION\n"
+            "SPIELGRUPPEN-AUSWAHL\n"
             "-----------------------------------------------\n"
-            f"Type:            {self._format_types(registration.booking.playgroup_types)}\n"
-            f"Days:            {self._format_days(registration)}\n"
+            f"Art:             {self._format_types(registration.booking.playgroup_types)}\n"
+            f"Tage:            {self._format_days(registration)}\n"
             "\n"
-            f"Monthly Fee:     {self._calculate_monthly_fee(registration)}\n"
-            "(Plus CHF 80 registration fee if first enrolment)\n"
+            f"Monatlicher Beitrag: {self._calculate_monthly_fee(registration)}\n"
+            "(Zzgl. CHF 80 Anmeldegebühr bei Erstanmeldung)\n"
             "\n"
             "-----------------------------------------------\n"
-            "PARENT / GUARDIAN\n"
+            "ELTERN / ERZIEHUNGSBERECHTIGTE\n"
             "-----------------------------------------------\n"
             f"Name:            {pg.full_name}\n"
-            f"Address:         {pg.street_address}\n"
+            f"Adresse:         {pg.street_address}\n"
             f"                 {pg.postal_code} {pg.city}\n"
-            f"Phone:           {pg.phone}\n"
-            f"Email:           {pg.email}\n"
+            f"Telefon:         {pg.phone}\n"
+            f"E-Mail:          {pg.email}\n"
             "\n"
             "-----------------------------------------------\n"
-            "EMERGENCY CONTACT\n"
+            "NOTFALLKONTAKT\n"
             "-----------------------------------------------\n"
             f"Name:            {ec.full_name}\n"
-            f"Phone:           {ec.phone}\n"
+            f"Telefon:         {ec.phone}\n"
             "\n"
             "===============================================\n"
             "\n"
-            "This registration was submitted via the automated registration assistant.\n"
+            "Diese Anmeldung wurde über den automatischen Anmeldeassistenten eingereicht.\n"
         )
 
     def _build_update_body(
@@ -247,33 +249,33 @@ class AdminNotifier:
 
         return (
             "===============================================\n"
-            "REGISTRATION UPDATE\n"
+            "ANMELDUNGS-AKTUALISIERUNG\n"
             "===============================================\n"
             "\n"
-            f"Updated:         {now.strftime('%d.%m.%Y')} at {now.strftime('%H:%M')} UTC\n"
-            f"Registration ID: {registration_id}  (Version {version})\n"
-            f"Child:           {registration.child.full_name}\n"
-            f"Parent Email:    {pg.email}\n"
+            f"Aktualisiert:    {now.strftime('%d.%m.%Y')} um {now.strftime('%H:%M')} Uhr (UTC)\n"
+            f"Anmelde-ID:      {registration_id}  (Version {version})\n"
+            f"Kind:            {registration.child.full_name}\n"
+            f"Eltern-E-Mail:   {pg.email}\n"
             "\n"
             "-----------------------------------------------\n"
-            "WHAT CHANGED\n"
+            "WAS HAT SICH GEÄNDERT\n"
             "-----------------------------------------------\n"
             f"{self._format_change_summary(change_summary)}\n"
             "\n"
             "-----------------------------------------------\n"
-            "CURRENT REGISTRATION (after update)\n"
+            "AKTUELLE ANMELDUNG (nach Aktualisierung)\n"
             "-----------------------------------------------\n"
-            f"Playgroup:       {self._format_types(registration.booking.playgroup_types)}\n"
-            f"Days:            {self._format_days(registration)}\n"
-            f"Monthly Fee:     {self._calculate_monthly_fee(registration)}\n"
+            f"Spielgruppe:     {self._format_types(registration.booking.playgroup_types)}\n"
+            f"Tage:            {self._format_days(registration)}\n"
+            f"Monatl. Beitrag: {self._calculate_monthly_fee(registration)}\n"
             "\n"
-            f"Parent:          {pg.full_name}\n"
-            f"Address:         {pg.street_address}, {pg.postal_code} {pg.city}\n"
-            f"Phone:           {pg.phone}\n"
+            f"Elternteil:      {pg.full_name}\n"
+            f"Adresse:         {pg.street_address}, {pg.postal_code} {pg.city}\n"
+            f"Telefon:         {pg.phone}\n"
             "\n"
             "===============================================\n"
             "\n"
-            "This update was submitted via the automated registration assistant.\n"
+            "Diese Aktualisierung wurde über den automatischen Anmeldeassistenten eingereicht.\n"
         )
 
     # ------------------------------------------------------------------

@@ -96,6 +96,7 @@ Rules:
 - Dates must be YYYY-MM-DD. Postal codes must be exactly 4 digits.
 - Valid days: "monday", "wednesday", "thursday" (indoor) or "monday" (outdoor).
 - `language` must be "de" or "en" based on the parent's message.
+- Always store free-text field values (especially `child.specialNeeds`) **in German** in `updates`, translating from the parent's language if necessary. Use "Keine" if the parent indicates no special needs.
 - The `reply` field must be natural, friendly, conversational text — not JSON and not a list of fields.
 - The `reply` field must be plain text only. No markdown: no **bold**, no _italic_, no # headers, no bullet points with - or *, no backticks. Use plain sentences and line breaks only."""
 
