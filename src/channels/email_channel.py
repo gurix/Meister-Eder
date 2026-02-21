@@ -178,8 +178,8 @@ class EmailChannel:
                     in_reply_to = msg.get("In-Reply-To", "").strip()
                     references = msg.get("References", "").strip()
 
-                    body = _extract_text(msg)
-                    body = _strip_quoted_text(body)
+                    raw_body = _extract_text(msg)
+                    body = _strip_quoted_text(raw_body)
 
                     if not body.strip():
                         imap.store(num, "+FLAGS", "\\Seen")
@@ -193,6 +193,7 @@ class EmailChannel:
                             "in_reply_to": in_reply_to,
                             "references": references,
                             "body": body,
+                            "raw_body": raw_body,
                         }
                     )
                     imap.store(num, "+FLAGS", "\\Seen")
