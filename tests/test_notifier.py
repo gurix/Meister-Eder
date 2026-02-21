@@ -15,7 +15,9 @@ def notifier():
         password="secret",
         use_tls=True,
         from_email="agent@example.com",
-        admin_emails=["to@example.com", "cc1@example.com", "cc2@example.com"],
+        indoor_email="andrea@example.com",
+        outdoor_email="barbara@example.com",
+        cc_emails=["markus@example.com"],
     )
 
 

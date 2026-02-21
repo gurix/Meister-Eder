@@ -58,7 +58,9 @@ def build_components(config: Config):
         password=config.imap_password,
         use_tls=config.smtp_use_tls,
         from_email=config.registration_email,
-        admin_emails=config.admin_emails,
+        indoor_email=config.admin_email_indoor,
+        outdoor_email=config.admin_email_outdoor,
+        cc_emails=[e.strip() for e in config.admin_email_cc.split(",") if e.strip()],
     )
 
     agent = EmailAgent(model=config.ai_model, kb=kb, store=store, notifier=notifier)

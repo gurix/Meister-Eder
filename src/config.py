@@ -32,10 +32,12 @@ class Config:
     # Registration email address shown to parents
     registration_email: str = ""
 
-    # Admin notification recipients (comma-separated).
-    # First address → To; remaining addresses → Cc.
-    # Set to a single address (e.g. your own) during testing.
-    admin_emails: list = field(default_factory=list)
+    # Admin notification routing.
+    # Each leader receives mail only when a day in their group is booked.
+    # For testing, point all three to your own address.
+    admin_email_indoor: str = ""   # Indoor leader (Andrea Sigrist) — To when indoor booked
+    admin_email_outdoor: str = ""  # Outdoor leader (Barbara Gross) — To when outdoor booked
+    admin_email_cc: str = ""       # Always Cc'd (Markus Graf / admin); comma-separated if multiple
 
     # Storage
     data_dir: Path = field(default_factory=lambda: Path("data"))
@@ -61,11 +63,9 @@ class Config:
             smtp_port=int(os.getenv("SMTP_PORT", "587")),
             smtp_use_tls=os.getenv("SMTP_USE_TLS", "true").lower() == "true",
             registration_email=os.getenv("REGISTRATION_EMAIL", ""),
-            admin_emails=[
-                e.strip()
-                for e in os.getenv("ADMIN_EMAILS", "").split(",")
-                if e.strip()
-            ],
+            admin_email_indoor=os.getenv("ADMIN_EMAIL_INDOOR", ""),
+            admin_email_outdoor=os.getenv("ADMIN_EMAIL_OUTDOOR", ""),
+            admin_email_cc=os.getenv("ADMIN_EMAIL_CC", ""),
             data_dir=Path(os.getenv("DATA_DIR", "data")),
             knowledge_base_dir=Path(
                 os.getenv(

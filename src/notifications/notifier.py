@@ -29,7 +29,9 @@ class AdminNotifier:
         password: str,
         use_tls: bool = True,
         from_email: str = "",
-        admin_emails: list[str] | None = None,
+        indoor_email: str = "",
+        outdoor_email: str = "",
+        cc_emails: list[str] | None = None,
     ) -> None:
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
@@ -37,7 +39,9 @@ class AdminNotifier:
         self._password = password
         self._use_tls = use_tls
         self._from_email = from_email or username
-        self._admin_emails: list[str] = admin_emails or []
+        self._indoor_email = indoor_email
+        self._outdoor_email = outdoor_email
+        self._cc_emails: list[str] = cc_emails or []
 
     # ------------------------------------------------------------------
     # Public API
@@ -52,11 +56,15 @@ class AdminNotifier:
         channel: str,
     ) -> None:
         """Send notification for a newly completed registration (version 1)."""
-        if not self._admin_emails:
-            logger.warning("ADMIN_EMAILS not configured — new-registration notification skipped.")
+        types = registration.booking.playgroup_types
+        to_addresses = self._recipients_for(types)
+        if not to_addresses:
+            logger.warning(
+                "No leader email configured for types %s — new-registration notification skipped.",
+                types,
+            )
             return
 
-        types = registration.booking.playgroup_types
         subject = (
             f"Neue Anmeldung: {registration.child.full_name} "
             f"– {self._format_types(types)}"
@@ -64,8 +72,8 @@ class AdminNotifier:
         body = self._build_new_body(registration, registration_id, version, channel)
 
         self._send(
-            to=[self._admin_emails[0]],
-            cc=self._admin_emails[1:],
+            to=to_addresses,
+            cc=self._cc_emails,
             subject=subject,
             body=body,
             reply_to=registration.parent_guardian.email or "",
@@ -80,20 +88,38 @@ class AdminNotifier:
         conversation_id: str,
     ) -> None:
         """Send notification when an existing registration is updated."""
-        if not self._admin_emails:
-            logger.warning("ADMIN_EMAILS not configured — update notification skipped.")
+        types = registration.booking.playgroup_types
+        to_addresses = self._recipients_for(types)
+        if not to_addresses:
+            logger.warning(
+                "No leader email configured for types %s — update notification skipped.",
+                types,
+            )
             return
 
         subject = f"Anmeldung aktualisiert: {registration.child.full_name}"
         body = self._build_update_body(registration, registration_id, version, change_summary)
 
         self._send(
-            to=[self._admin_emails[0]],
-            cc=self._admin_emails[1:],
+            to=to_addresses,
+            cc=self._cc_emails,
             subject=subject,
             body=body,
             reply_to=registration.parent_guardian.email or "",
         )
+
+    # ------------------------------------------------------------------
+    # Routing helpers
+    # ------------------------------------------------------------------
+
+    def _recipients_for(self, types: list[str]) -> list[str]:
+        """Return To addresses based on which playgroup types are booked."""
+        recipients = []
+        if "indoor" in types and self._indoor_email:
+            recipients.append(self._indoor_email)
+        if "outdoor" in types and self._outdoor_email:
+            recipients.append(self._outdoor_email)
+        return recipients
 
     # ------------------------------------------------------------------
     # Formatting helpers
