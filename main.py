@@ -100,6 +100,8 @@ def run_poll_loop(agent: EmailAgent, channel: EmailChannel, poll_interval: int) 
                             body=reply,
                             in_reply_to=msg["message_id"],
                             references=msg["references"],
+                            quoted_text=msg["body"],
+                            quoted_from=msg["from"],
                         )
                 except Exception:
                     logger.exception(

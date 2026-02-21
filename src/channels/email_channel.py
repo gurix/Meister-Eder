@@ -94,6 +94,23 @@ def _generate_message_id(from_addr: str) -> str:
     return f"<{time.time():.6f}.{id(from_addr)}@{domain}>"
 
 
+def _build_quoted_block(original_text: str, from_addr: str) -> str:
+    """Format original_text as a standard email quote block.
+
+    Produces the classic:
+
+        On <date>, <from> wrote:
+        > line 1
+        > line 2
+    """
+    date_str = time.strftime("%a, %d %b %Y %H:%M", time.localtime())
+    header = f"Am {date_str} schrieb {from_addr}:"
+    quoted_lines = "\n".join(
+        f"> {line}" for line in original_text.splitlines()
+    )
+    return f"\n\n{header}\n{quoted_lines}"
+
+
 # ---------------------------------------------------------------------------
 # Main class
 # ---------------------------------------------------------------------------
@@ -201,8 +218,13 @@ class EmailChannel:
         body: str,
         in_reply_to: str = "",
         references: str = "",
+        quoted_text: str = "",
+        quoted_from: str = "",
     ) -> str:
         """Send an email reply.
+
+        If quoted_text is provided it is appended to body as a standard
+        ``> ``-prefixed quote block so parents can see what they wrote.
 
         Returns the new Message-ID so the caller can track the thread.
         """
@@ -215,6 +237,10 @@ class EmailChannel:
         # Build References chain
         ref_parts = [r for r in [references, in_reply_to] if r]
         new_references = " ".join(ref_parts)
+
+        # Append quoted original message
+        if quoted_text.strip():
+            body = body + _build_quoted_block(quoted_text, quoted_from or to)
 
         msg = MIMEMultipart("alternative")
         msg["From"] = self._from_email
