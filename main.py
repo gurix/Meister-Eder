@@ -58,6 +58,7 @@ def build_components(config: Config):
         password=config.imap_password,
         use_tls=config.smtp_use_tls,
         from_email=config.registration_email,
+        admin_emails=config.admin_emails,
     )
 
     agent = EmailAgent(model=config.ai_model, kb=kb, store=store, notifier=notifier)

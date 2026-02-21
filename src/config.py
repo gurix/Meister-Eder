@@ -32,6 +32,11 @@ class Config:
     # Registration email address shown to parents
     registration_email: str = ""
 
+    # Admin notification recipients (comma-separated).
+    # First address → To; remaining addresses → Cc.
+    # Set to a single address (e.g. your own) during testing.
+    admin_emails: list = field(default_factory=list)
+
     # Storage
     data_dir: Path = field(default_factory=lambda: Path("data"))
     knowledge_base_dir: Path = field(
@@ -56,6 +61,11 @@ class Config:
             smtp_port=int(os.getenv("SMTP_PORT", "587")),
             smtp_use_tls=os.getenv("SMTP_USE_TLS", "true").lower() == "true",
             registration_email=os.getenv("REGISTRATION_EMAIL", ""),
+            admin_emails=[
+                e.strip()
+                for e in os.getenv("ADMIN_EMAILS", "").split(",")
+                if e.strip()
+            ],
             data_dir=Path(os.getenv("DATA_DIR", "data")),
             knowledge_base_dir=Path(
                 os.getenv(

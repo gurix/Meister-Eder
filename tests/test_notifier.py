@@ -15,28 +15,8 @@ def notifier():
         password="secret",
         use_tls=True,
         from_email="agent@example.com",
+        admin_emails=["to@example.com", "cc1@example.com", "cc2@example.com"],
     )
-
-
-# ---------------------------------------------------------------------------
-# _recipients_for
-# ---------------------------------------------------------------------------
-
-
-class TestRecipientsFor:
-    def test_indoor_only_recipients(self, notifier):
-        recipients = notifier._recipients_for(["indoor"])
-        assert any("andrea" in r.lower() or "sigrist" in r.lower() for r in recipients)
-
-    def test_outdoor_only_recipients(self, notifier):
-        recipients = notifier._recipients_for(["outdoor"])
-        assert any("baba.laeubli" in r.lower() for r in recipients)
-
-    def test_both_includes_both_leaders(self, notifier):
-        recipients = notifier._recipients_for(["indoor", "outdoor"])
-        joined = " ".join(recipients).lower()
-        assert "andrea.sigrist" in joined
-        assert "baba.laeubli" in joined
 
 
 # ---------------------------------------------------------------------------
