@@ -13,7 +13,7 @@ STEP_DESCRIPTIONS = {
     "child_name": "Ask for the child's full name.",
     "child_dob": (
         "Ask for the child's date of birth. "
-        "Validate age: indoor requires ≥2.5 years, outdoor requires ≥3 years."
+        "Validate age: indoor requires ≥2 years, outdoor requires ≥2.5 years."
     ),
     "playgroup_selection": (
         "Explain both playgroup options and ask which the parent wants "
@@ -152,7 +152,7 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
 ## Registration Flow (8 steps)
 1. greeting — greet and detect intent
 2. child_name — ask for child's full name
-3. child_dob — ask for date of birth; validate age (indoor ≥2.5 yrs, outdoor ≥3 yrs)
+3. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
 4. playgroup_selection — present options, collect type(s) and day(s)
 5. special_needs — ask about special needs / allergies / medical conditions
 6. parent_contact — name, street address, postal code, city, phone, email
