@@ -11,8 +11,8 @@ from ..models.conversation import ConversationState
 STEP_DESCRIPTIONS = {
     "greeting": (
         "Greet the parent warmly and detect their intent (registration vs. questions). "
-        "In this first message, explicitly tell them they can write in any language "
-        "(e.g. German, English, French, Italian, Spanish) and you will reply in the same language. "
+        "In this first message, explicitly tell them they can write in any human language "
+        "and you will reply in the same language. "
         "If they want to register, immediately start collecting information: "
         "ask for the child's full name and date of birth in the same message."
     ),
