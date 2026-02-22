@@ -1,17 +1,16 @@
 """EmailAgent — the channel-agnostic conversation orchestrator."""
 
-import json
 import logging
-import re
 from datetime import datetime, timezone
 
 from ..models.conversation import ConversationState, ChatMessage
-from ..models.registration import BookingDay, RegistrationData
+from ..models.registration import RegistrationData
 from .. import llm
 from ..knowledge_base.loader import KnowledgeBase
 from ..storage.json_store import ConversationStore, normalize_email, _diff_registrations
 from ..notifications.notifier import AdminNotifier
 from .prompts import build_system_prompt
+from .response_parser import apply_updates, fallback_message, parse_llm_response
 
 logger = logging.getLogger(__name__)
 
@@ -192,79 +191,10 @@ class EmailAgent:
     # ------------------------------------------------------------------
 
     def _parse_llm_response(self, content: str) -> dict:
-        """Extract the JSON payload from the LLM's raw output."""
-        text = content.strip()
-
-        fence_match = re.match(r"^```(?:json)?\s*\n(.*?)\n```\s*$", text, re.DOTALL)
-        if fence_match:
-            text = fence_match.group(1).strip()
-
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
-
-        brace_match = re.search(r"\{.*\}", text, re.DOTALL)
-        if brace_match:
-            try:
-                return json.loads(brace_match.group())
-            except json.JSONDecodeError:
-                pass
-
-        logger.warning("Could not parse LLM response as JSON — using raw text as reply.")
-        return {
-            "reply": content,
-            "intent": "question",
-            "updates": {},
-            "next_step": "greeting",
-            "registration_complete": False,
-            "language": "de",
-        }
+        return parse_llm_response(content)
 
     def _fallback_message(self, state: ConversationState) -> str:
-        if state.language == "en":
-            return (
-                "I'm sorry, I'm having a technical issue right now. "
-                "Please try again in a moment or contact us directly."
-            )
-        return (
-            "Entschuldigung, ich habe gerade ein technisches Problem. "
-            "Bitte versuche es gleich nochmal oder kontaktiere uns direkt."
-        )
+        return fallback_message(state.language)
 
     def _apply_updates(self, state: ConversationState, updates: dict) -> None:
-        """Write extracted field values into the RegistrationData object."""
-        reg = state.registration
-
-        field_map = {
-            "child.fullName": lambda v: setattr(reg.child, "full_name", v),
-            "child.dateOfBirth": lambda v: setattr(reg.child, "date_of_birth", v),
-            "child.specialNeeds": lambda v: setattr(reg.child, "special_needs", v),
-            "parentGuardian.fullName": lambda v: (
-                setattr(reg.parent_guardian, "full_name", v),
-                setattr(state, "parent_name", v),
-            ),
-            "parentGuardian.streetAddress": lambda v: setattr(reg.parent_guardian, "street_address", v),
-            "parentGuardian.postalCode": lambda v: setattr(reg.parent_guardian, "postal_code", str(v)),
-            "parentGuardian.city": lambda v: setattr(reg.parent_guardian, "city", v),
-            "parentGuardian.phone": lambda v: setattr(reg.parent_guardian, "phone", v),
-            "parentGuardian.email": lambda v: setattr(reg.parent_guardian, "email", v),
-            "emergencyContact.fullName": lambda v: setattr(reg.emergency_contact, "full_name", v),
-            "emergencyContact.phone": lambda v: setattr(reg.emergency_contact, "phone", v),
-        }
-
-        for key, value in updates.items():
-            if value is None:
-                continue
-            if key in field_map:
-                field_map[key](value)
-            elif key == "booking.playgroupTypes" and isinstance(value, list):
-                reg.booking.playgroup_types = value
-            elif key == "booking.selectedDays" and isinstance(value, list):
-                reg.booking.selected_days = [
-                    BookingDay(day=d["day"], type=d["type"])
-                    for d in value
-                    if isinstance(d, dict) and "day" in d and "type" in d
-                ]
-            else:
-                logger.debug("Unknown update key ignored: %s", key)
+        apply_updates(state, updates)

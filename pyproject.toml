@@ -10,6 +10,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     # Registration schema validation
     "jsonschema>=4.23.0",
+    "chainlit>=2.9.6",
 ]
 
 [project.scripts]

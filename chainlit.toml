@@ -1,0 +1,18 @@
+[project]
+# Project name shown in browser title / header
+name = "Spielgruppe Pumuckl"
+# Never send usage data to Chainlit cloud
+enable_telemetry = false
+
+[UI]
+name = "Spielgruppe Pumuckl"
+# German is the default language; the agent switches automatically to English
+# if the parent writes in English
+default_language = "de"
+# Accessibility overrides on top of the default Chainlit theme
+custom_css = "/public/custom.css"
+# Accessibility JS: ARIA live region, focus management, skip-to-content link
+custom_js = "/public/accessibility.js"
+
+[meta]
+generated_by = "2.x"

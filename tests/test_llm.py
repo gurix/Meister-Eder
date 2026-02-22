@@ -65,3 +65,60 @@ class TestLlmComplete:
 
         with pytest.raises(RuntimeError, match="API error"):
             llm.complete("anthropic/claude-opus-4-6", "system", [])
+
+
+class TestLlmStreamComplete:
+    def _make_chunk(self, content):
+        chunk = type("Chunk", (), {})()
+        choice = type("Choice", (), {})()
+        delta = type("Delta", (), {"content": content})()
+        choice.delta = delta
+        chunk.choices = [choice]
+        return chunk
+
+    def test_yields_chunks(self, mocker):
+        chunks = [self._make_chunk("Hal"), self._make_chunk("lo!")]
+        mocker.patch("litellm.completion", return_value=iter(chunks))
+
+        result = list(llm.stream_complete("anthropic/claude-opus-4-6", "system", []))
+
+        assert result == ["Hal", "lo!"]
+
+    def test_skips_empty_deltas(self, mocker):
+        chunks = [self._make_chunk("Hello"), self._make_chunk(None), self._make_chunk("!")]
+        mocker.patch("litellm.completion", return_value=iter(chunks))
+
+        result = list(llm.stream_complete("anthropic/claude-opus-4-6", "system", []))
+
+        assert result == ["Hello", "!"]
+
+    def test_passes_stream_true(self, mocker):
+        mock_completion = mocker.patch("litellm.completion", return_value=iter([]))
+
+        list(llm.stream_complete("anthropic/claude-opus-4-6", "system", []))
+
+        assert mock_completion.call_args.kwargs["stream"] is True
+
+    def test_passes_model(self, mocker):
+        mock_completion = mocker.patch("litellm.completion", return_value=iter([]))
+
+        list(llm.stream_complete("openai/gpt-4o", "system", []))
+
+        assert mock_completion.call_args.kwargs["model"] == "openai/gpt-4o"
+
+    def test_system_prompt_prepended(self, mocker):
+        mock_completion = mocker.patch("litellm.completion", return_value=iter([]))
+
+        list(llm.stream_complete("anthropic/claude-opus-4-6", "You are helpful.", []))
+
+        messages = mock_completion.call_args.kwargs["messages"]
+        assert messages[0] == {"role": "system", "content": "You are helpful."}
+
+    def test_chat_messages_appended(self, mocker):
+        mock_completion = mocker.patch("litellm.completion", return_value=iter([]))
+
+        chat = [ChatMessage(role="user", content="Hallo")]
+        list(llm.stream_complete("anthropic/claude-opus-4-6", "system", chat))
+
+        messages = mock_completion.call_args.kwargs["messages"]
+        assert messages[1] == {"role": "user", "content": "Hallo"}
