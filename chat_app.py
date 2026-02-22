@@ -18,7 +18,6 @@ Environment variables (see .env.example):
   DATA_DIR             Directory for completed registration JSON  (default: data/)
 """
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -101,6 +100,8 @@ async def on_chat_start() -> None:
     # Brand new session
     session_id = str(uuid.uuid4())
     state = ConversationState(conversation_id=session_id)
+    # Store the welcome in history so it's replayed if the session reconnects.
+    state.messages.append(ChatMessage(role="assistant", content=_WELCOME_DE))
     cl.user_session.set("state", state.to_dict())
     logger.info("Chat session started: %s", session_id)
     await cl.Message(content=_WELCOME_DE).send()
@@ -114,20 +115,20 @@ async def on_message(message: cl.Message) -> None:
     now = datetime.now(timezone.utc).isoformat()
     state.last_activity = now
 
-    # Append parent's message to history
+    # Append parent's message to history and persist immediately so that any
+    # WebSocket reconnect during the LLM call can replay the full conversation.
     state.messages.append(ChatMessage(role="user", content=message.content))
+    cl.user_session.set("state", state.to_dict())
 
     # --- Build system prompt ---
     system = build_system_prompt(_kb, state)
 
-    # --- Call LLM in a thread so the async event loop (and WebSocket) stay alive ---
-    # litellm.completion is synchronous; running it directly in an async handler
-    # blocks the event loop for the full response duration and causes WebSocket
-    # timeouts that trigger on_chat_start again (clearing the screen).
+    # --- Call LLM natively async to keep the event loop free ---
+    # litellm.acompletion() is a true coroutine — it does not block the event
+    # loop and does not require asyncio.to_thread (which can drop Chainlit's
+    # contextvars, causing the session to reset mid-conversation).
     try:
-        full_content = await asyncio.to_thread(
-            llm.complete, _config.ai_model, system, state.messages
-        )
+        full_content = await llm.acomplete(_config.ai_model, system, state.messages)
     except Exception:
         logger.exception("LLM call failed for session %s", state.conversation_id)
         error_text = fallback_message(state.language)

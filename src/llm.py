@@ -5,6 +5,27 @@ from collections.abc import Generator
 import litellm
 
 
+async def acomplete(model: str, system: str, messages: list) -> str:
+    """Call any LLM asynchronously and return the response text.
+
+    This is the async equivalent of ``complete()`` — use this from async
+    handlers (e.g. Chainlit's ``@cl.on_message``) to avoid blocking the
+    event loop and losing framework context variables.
+
+    Args:
+        model: litellm model string, e.g. "anthropic/claude-opus-4-6".
+        system: System prompt text.
+        messages: List of objects with .role and .content attributes.
+
+    Returns:
+        The model's reply as a plain string.
+    """
+    api_messages = [{"role": "system", "content": system}]
+    api_messages += [{"role": m.role, "content": m.content} for m in messages]
+    response = await litellm.acompletion(model=model, messages=api_messages, max_tokens=2048)
+    return response.choices[0].message.content
+
+
 def complete(model: str, system: str, messages: list) -> str:
     """Call any LLM and return the response text.
 
