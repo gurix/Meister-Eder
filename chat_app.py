@@ -18,6 +18,7 @@ Environment variables (see .env.example):
   DATA_DIR             Directory for completed registration JSON  (default: data/)
 """
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -77,11 +78,30 @@ _WELCOME_DE = (
 
 @cl.on_chat_start
 async def on_chat_start() -> None:
-    """Initialise a fresh conversation state and greet the parent."""
+    """Initialise a fresh conversation state and greet the parent.
+
+    If cl.user_session already holds state (WebSocket reconnect after a
+    network drop), replay the existing message history so the parent sees
+    the full conversation rather than a blank screen.
+    """
+    existing = cl.user_session.get("state")
+    if existing:
+        # Reconnected — restore visual history from our stored state
+        state = ConversationState.from_dict(existing)
+        logger.info(
+            "Session reconnected: %s (%d messages)",
+            state.conversation_id,
+            len(state.messages),
+        )
+        for msg in state.messages:
+            author = "Spielgruppe Pumuckl" if msg.role == "assistant" else "Du / You"
+            await cl.Message(content=msg.content, author=author).send()
+        return
+
+    # Brand new session
     session_id = str(uuid.uuid4())
     state = ConversationState(conversation_id=session_id)
     cl.user_session.set("state", state.to_dict())
-
     logger.info("Chat session started: %s", session_id)
     await cl.Message(content=_WELCOME_DE).send()
 
@@ -100,14 +120,14 @@ async def on_message(message: cl.Message) -> None:
     # --- Build system prompt ---
     system = build_system_prompt(_kb, state)
 
-    # --- Collect LLM response (JSON), then display only the reply field ---
-    # The LLM returns a structured JSON object; we must not stream raw tokens
-    # to the user because they would see the JSON wrapper, not the reply text.
-    full_content = ""
-
+    # --- Call LLM in a thread so the async event loop (and WebSocket) stay alive ---
+    # litellm.completion is synchronous; running it directly in an async handler
+    # blocks the event loop for the full response duration and causes WebSocket
+    # timeouts that trigger on_chat_start again (clearing the screen).
     try:
-        for chunk in llm.stream_complete(_config.ai_model, system, state.messages):
-            full_content += chunk
+        full_content = await asyncio.to_thread(
+            llm.complete, _config.ai_model, system, state.messages
+        )
     except Exception:
         logger.exception("LLM call failed for session %s", state.conversation_id)
         error_text = fallback_message(state.language)
