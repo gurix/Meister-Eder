@@ -100,17 +100,16 @@ async def on_message(message: cl.Message) -> None:
     # --- Build system prompt ---
     system = build_system_prompt(_kb, state)
 
-    # --- Stream LLM response ---
-    msg = cl.Message(content="")
+    # --- Collect LLM response (JSON), then display only the reply field ---
+    # The LLM returns a structured JSON object; we must not stream raw tokens
+    # to the user because they would see the JSON wrapper, not the reply text.
     full_content = ""
 
     try:
         for chunk in llm.stream_complete(_config.ai_model, system, state.messages):
-            await msg.stream_token(chunk)
             full_content += chunk
-        await msg.send()
     except Exception:
-        logger.exception("LLM streaming failed for session %s", state.conversation_id)
+        logger.exception("LLM call failed for session %s", state.conversation_id)
         error_text = fallback_message(state.language)
         await cl.Message(content=error_text).send()
         # Don't update state — let parent retry
@@ -133,6 +132,9 @@ async def on_message(message: cl.Message) -> None:
 
     # Append assistant reply to history
     state.messages.append(ChatMessage(role="assistant", content=reply_text))
+
+    # Send the reply text to the user (parsed from the LLM's JSON response)
+    await cl.Message(content=reply_text).send()
 
     # --- Handle registration completion ---
     if is_complete and not state.completed:
