@@ -15,7 +15,7 @@ This change adds a parent-facing confirmation email triggered at the same point 
 - Email contains a Swiss QR-bill (QR code image) embedded inline so the parent can pay via banking app or print
 
 **Non-Goals:**
-- Translating the payment section into English (Swiss QR-bill and bank instructions are always in German regardless of language)
+- Translating the QR-bill slip labels themselves (the SIX Group standard mandates German/French/Italian for the payment slip fields — surrounding email text is translated, but the slip is not)
 - Sending a reminder if the parent hasn't paid (payment tracking is out of scope)
 - Generating a full PDF invoice (QR code embedded in HTML email is sufficient)
 - Sibling discount handling in the QR-bill amount (CHF 80 is always fixed for the registration fee)
@@ -67,11 +67,15 @@ multipart/mixed
 
 ### 4. Language
 
-**Decision**: Confirmation email body in German by default. The payment block is always German.
+**Decision**: Add a `language` field to `RegistrationData` (default `"de"`). The agent sets it when it detects the parent's language during conversation. The confirmation email body is rendered in the stored language. The QR-bill slip labels are fixed German/French/Italian per the SIX Group standard and are not translated.
 
-**Rationale**: The registration schema does not store the parent's detected language. German is the default for all admin-facing and parent-facing content. Adding language detection to the registration model is out of scope for this change.
+**Supported values**: `"de"` (German, default) and `"en"` (English). Other values fall back to `"de"`.
 
-**Future improvement**: Store `language` in `metadata` during conversation and pass it to the notifier so the body can be in English when detected.
+**Where it lives in the model**: A new `metadata` field on `RegistrationData` (a `Metadata` dataclass) with fields `submitted_at`, `channel`, `conversation_id`, and `language`. This also aligns with the JSON schema in `registration-schema.json` which already defines a `metadata` object with those keys. The `language` field is added to both the Python model and the JSON schema.
+
+**Template strategy**: Two string-template dicts (one per language) for all user-visible strings in the confirmation email. The notifier selects the dict based on `registration.metadata.language`. Admin notifications remain German-only (admins are Swiss German speakers).
+
+**Rationale**: Parents who conversed in English reasonably expect an English confirmation. Storing language in the model (rather than passing it as a parameter) means it's persisted with the registration and available for future use (e.g. update notifications, reminders).
 
 ### 5. Trigger Point
 
@@ -89,7 +93,7 @@ multipart/mixed
 
 **SMTP failure for parent email**: Parent notification is non-critical (the registration is already stored). Failure is logged as a warning, not an exception.
 
-**Language mismatch**: A parent who spoke English during chat will receive a German confirmation. Acceptable for MVP given the Swiss German context and the fact that the payment instructions must be in German regardless.
+**Language detection accuracy**: The agent infers language from conversation content. Misdetection is possible but low-risk — a parent who receives a German email when they expected English can still understand the registration summary. The QR-bill is universally recognisable regardless of surrounding language.
 
 ## Open Questions
 
