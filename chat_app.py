@@ -93,7 +93,7 @@ async def on_chat_start() -> None:
             len(state.messages),
         )
         for msg in state.messages:
-            author = "Spielgruppe Pumuckl" if msg.role == "assistant" else "Du / You"
+            author = "Spielgruppe Pumuckl" if msg.role == "assistant" else "Du"
             await cl.Message(content=msg.content, author=author).send()
         return
 
