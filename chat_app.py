@@ -172,6 +172,15 @@ async def on_message(message: cl.Message) -> None:
             logger.exception(
                 "Failed to save/notify for session %s", state.conversation_id
             )
+        try:
+            _notifier.notify_parent(
+                registration=state.registration,
+                language=state.language,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send parent confirmation for session %s", state.conversation_id
+            )
 
     # --- Handle post-completion update intent ---
     if state.completed and intent == "update" and any(v is not None for v in updates.values()):
