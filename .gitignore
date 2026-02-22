@@ -20,6 +20,9 @@ env/
 # Agent data (conversations and registrations stored at runtime)
 data/
 
+# Chainlit runtime (auto-generated; not authored)
+.chainlit/
+
 # IDE
 .idea/
 .vscode/

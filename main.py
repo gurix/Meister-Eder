@@ -63,7 +63,13 @@ def build_components(config: Config):
         cc_emails=[e.strip() for e in config.admin_email_cc.split(",") if e.strip()],
     )
 
-    agent = EmailAgent(model=config.ai_model, kb=kb, store=store, notifier=notifier)
+    agent = EmailAgent(
+        model=config.ai_model,
+        kb=kb,
+        store=store,
+        notifier=notifier,
+        thinking_budget=config.thinking_budget,
+    )
 
     channel = EmailChannel(
         imap_host=config.imap_host,

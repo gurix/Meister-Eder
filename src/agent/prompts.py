@@ -1,6 +1,7 @@
 """Build the system prompt sent to the LLM on every turn."""
 
 import json
+from datetime import date
 
 from ..knowledge_base.loader import KnowledgeBase
 from ..models.conversation import ConversationState
@@ -154,7 +155,11 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
     reg_json = json.dumps(state.registration.to_dict(), ensure_ascii=False, indent=2)
     step_hint = STEP_DESCRIPTIONS.get(state.flow_step, "Continue the conversation.")
 
+    today = date.today().isoformat()
+
     return f"""You are the registration assistant for Spielgruppe Pumuckl, run by Familienverein Fällanden in Fällanden, Switzerland. You help parents register their children for the playgroup and answer questions about it.
+
+**Today's date is {today}.** Use this exact date when calculating a child's age from their date of birth.
 
 {_PERSONALITY}
 
@@ -200,7 +205,11 @@ def _build_post_completion_prompt(kb: KnowledgeBase, state: ConversationState) -
     reg_json = json.dumps(state.registration.to_dict(), ensure_ascii=False, indent=2)
     child_name = state.registration.child.full_name or "their child"
 
+    today = date.today().isoformat()
+
     return f"""You are the registration assistant for Spielgruppe Pumuckl, run by Familienverein Fällanden in Fällanden, Switzerland.
+
+**Today's date is {today}.**
 
 {_PERSONALITY}
 

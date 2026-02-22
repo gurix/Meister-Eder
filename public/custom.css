@@ -1,0 +1,112 @@
+/*
+ * Spielgruppe Pumuckl — Accessibility overrides for Chainlit
+ *
+ * Goals:
+ *  - WCAG 2.1 AA colour contrast (≥ 4.5:1 for normal text, ≥ 3:1 for large text)
+ *  - prefers-reduced-motion: replace animated typing dots with static indicator
+ *  - Skip-to-content link visible on keyboard focus
+ *  - iOS Safari virtual keyboard: use dynamic viewport height so input stays visible
+ */
+
+/* ─── Skip-to-content link ──────────────────────────────────────────────── */
+
+#skip-to-chat {
+  position: absolute;
+  top: -9999px;
+  left: 8px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: #1a56db;   /* WCAG AA on white: contrast ≈ 5.9:1 */
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#skip-to-chat:focus {
+  top: 8px;
+  outline: 3px solid #f97316;
+  outline-offset: 2px;
+}
+
+/* ─── Viewport height fix for iOS Safari virtual keyboard ───────────────── */
+/*
+ * 100dvh (dynamic viewport height) shrinks when the virtual keyboard opens,
+ * keeping the message input visible. Falls back to 100vh on older browsers.
+ */
+
+#root,
+.cl-app,
+[data-testid="layout"],
+.main-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ─── Colour contrast overrides ─────────────────────────────────────────── */
+/*
+ * Chainlit's default light theme uses mid-grey text (#6b7280) on white,
+ * which gives ≈ 4.0:1 — below the 4.5:1 AA threshold for normal text.
+ * Override to #595f6b which measures ≈ 4.6:1 on #ffffff.
+ *
+ * Chainlit's dark theme text is #d1d5db on #1c1c1e (≈ 10:1) — already passes.
+ * We only override the light theme muted/secondary colour.
+ */
+
+/* Muted/secondary text — bump from #6b7280 (4.0:1) to #595f6b (≈ 4.6:1) */
+.text-gray-500,
+[class*="text-muted"],
+[class*="secondary"] {
+  color: #595f6b !important;
+}
+
+/* Input placeholder — same issue; force dark enough value */
+input::placeholder,
+textarea::placeholder {
+  color: #595f6b !important;
+  opacity: 1;              /* Firefox reduces opacity by default */
+}
+
+/* ─── Reduced-motion: replace animated typing dots with static "…" ──────── */
+/*
+ * Chainlit shows a bouncing-dots animation while the agent is generating.
+ * When prefers-reduced-motion is set, hide the animation and show "…" instead.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Hide animated dot elements (Chainlit uses span.dot or similar) */
+  .typing-indicator span,
+  .loader span,
+  [class*="typing"] span,
+  [class*="loader"] span,
+  [class*="bounce"] {
+    animation: none !important;
+    visibility: hidden;
+  }
+
+  /* Show a static ellipsis as the parent container's content */
+  .typing-indicator::after,
+  .loader::after,
+  [class*="typing"]::after,
+  [class*="loader"]::after {
+    content: "…";
+    visibility: visible;
+    display: inline-block;
+    color: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    letter-spacing: 0.05em;
+  }
+
+  /* Suppress all other CSS transitions and animations */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -85,9 +85,43 @@ GEMINI_API_KEY=...
 
 ## Running
 
-### As a cron job (recommended)
+### Web chat
 
-The agent is a plain script — no long-running daemon needed. Schedule it with cron and use `flock` to prevent overlapping runs:
+Start the web chat interface:
+
+```bash
+uv run chainlit run chat_app.py
+```
+
+The chat opens at **http://localhost:8000** by default.
+
+To listen on a different port or host:
+
+```bash
+uv run chainlit run chat_app.py --port 8080 --host 0.0.0.0
+```
+
+**Minimum required env vars for the web chat:**
+
+| Variable | Description |
+|---|---|
+| `AI_MODEL` | litellm model string, e.g. `anthropic/claude-opus-4-6` |
+| `ANTHROPIC_API_KEY` | (or the key for your chosen provider) |
+| `SMTP_HOST` / `SMTP_PORT` | For admin notification emails on registration completion |
+| `IMAP_USERNAME` / `IMAP_PASSWORD` | Used as SMTP credentials |
+| `ADMIN_EMAIL_INDOOR` | Andrea Sigrist — notified when indoor group is booked |
+| `ADMIN_EMAIL_OUTDOOR` | Barbara Gross — notified when outdoor group is booked |
+| `ADMIN_EMAIL_CC` | Markus Graf — always CC'd on notifications |
+
+IMAP variables (`IMAP_HOST`, etc.) are not required for the web chat — only for the email channel.
+
+### Email channel
+
+The email agent polls an IMAP inbox and replies via SMTP. No web server required.
+
+**As a cron job (recommended)**
+
+Schedule with cron and use `flock` to prevent overlapping runs:
 
 ```cron
 */5 * * * * flock -n /tmp/meister-eder-email.lock uv run python main.py
@@ -95,11 +129,25 @@ The agent is a plain script — no long-running daemon needed. Schedule it with 
 
 `flock -n` exits immediately if a previous run is still in progress, so the script is always safe to schedule aggressively.
 
-### Manually
+**Manually**
 
 ```bash
 uv run python main.py
 ```
+
+### Running both channels together
+
+The web chat and email agent are independent processes — run them side by side:
+
+```bash
+# Terminal 1 — web chat
+uv run chainlit run chat_app.py
+
+# Terminal 2 — email polling
+uv run python main.py
+```
+
+Completed registrations from both channels are stored in the same `DATA_DIR` (default: `data/`) and share the same admin notification configuration.
 
 ## Development
 

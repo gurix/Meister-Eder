@@ -3,11 +3,32 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack:
+    - Language: Python 3.13+
+    - Package manager: uv (pyproject.toml — never requirements.txt)
+    - Chat interface: Chainlit 2.x (entry point: chat_app.py)
+    - LLM access: LiteLLM (provider-agnostic; src/llm.py wraps litellm.completion)
+    - Email channel: IMAP/SMTP via stdlib (imaplib, smtplib); entry point: main.py
+    - Storage: file-based JSON (no database); data/ directory
+    - Knowledge base: admin-editable Markdown files in openspec/.../knowledge-base/
+    - Tests: pytest + pytest-mock (tests/ directory)
+
+  Key architectural decisions:
+    - Channel-agnostic agent core: src/agent/ (prompts, response_parser) is shared
+      between email (src/agent/core.py / EmailAgent) and chat (chat_app.py)
+    - LLM streaming: src/llm.stream_complete() yields chunks via litellm stream=True
+    - Session state for chat: cl.user_session (Chainlit server-side, survives page refresh)
+    - Accessibility: public/custom.css (contrast, dvh, reduced-motion) +
+      public/accessibility.js (ARIA live region, focus management, skip link)
+    - Admin notifications routed by playgroup type (indoor→Andrea, outdoor→Barbara, CC Markus)
+
+  Conventions:
+    - German is the default language; agent auto-detects and switches to English
+    - Use informal "du" in German agent responses
+    - All knowledge base content stays in Markdown (non-technical admins can edit it)
+    - Schema validation required before saving any completed registration
+    - Never hardcode fee amounts or contact details in application code
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
