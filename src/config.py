@@ -50,6 +50,11 @@ class Config:
     # Polling interval in seconds
     poll_interval: int = 60
 
+    # Extended thinking — Anthropic models only.
+    # When set, enables the thinking phase before the LLM replies.
+    # Recommended value: 8000 (tokens). Set to None/unset to disable.
+    thinking_budget: int | None = None
+
     @classmethod
     def from_env(cls) -> "Config":
         return cls(
@@ -74,4 +79,9 @@ class Config:
                 )
             ),
             poll_interval=int(os.getenv("POLL_INTERVAL", "60")),
+            thinking_budget=(
+                int(os.getenv("THINKING_BUDGET"))
+                if os.getenv("THINKING_BUDGET")
+                else None
+            ),
         )

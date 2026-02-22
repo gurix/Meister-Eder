@@ -123,17 +123,15 @@ async def on_message(message: cl.Message) -> None:
     # --- Build system prompt ---
     system = build_system_prompt(_kb, state)
 
-    # --- Call LLM natively async to keep the event loop free ---
-    # litellm.acompletion() is a true coroutine — it does not block the event
-    # loop and does not require asyncio.to_thread (which can drop Chainlit's
-    # contextvars, causing the session to reset mid-conversation).
+    # --- Call LLM natively async (supports extended thinking; no event-loop blocking) ---
     try:
-        full_content = await llm.acomplete(_config.ai_model, system, state.messages)
+        full_content = await llm.acomplete(
+            _config.ai_model, system, state.messages, _config.thinking_budget
+        )
     except Exception:
         logger.exception("LLM call failed for session %s", state.conversation_id)
         error_text = fallback_message(state.language)
         await cl.Message(content=error_text).send()
-        # Don't update state — let parent retry
         return
 
     # --- Parse and apply LLM response ---
@@ -151,11 +149,11 @@ async def on_message(message: cl.Message) -> None:
     state.language = language
     state.updated_at = now
 
+    # Send the reply text to the parent (only the human-readable reply, not the JSON wrapper)
+    await cl.Message(content=reply_text).send()
+
     # Append assistant reply to history
     state.messages.append(ChatMessage(role="assistant", content=reply_text))
-
-    # Send the reply text to the user (parsed from the LLM's JSON response)
-    await cl.Message(content=reply_text).send()
 
     # --- Handle registration completion ---
     if is_complete and not state.completed:

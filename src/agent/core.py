@@ -31,8 +31,10 @@ class EmailAgent:
         kb: KnowledgeBase,
         store: ConversationStore,
         notifier: AdminNotifier,
+        thinking_budget: int | None = None,
     ) -> None:
         self._model = model
+        self._thinking_budget = thinking_budget
         self._kb = kb
         self._store = store
         self._notifier = notifier
@@ -98,7 +100,7 @@ class EmailAgent:
         system = build_system_prompt(self._kb, state)
 
         try:
-            content = llm.complete(self._model, system, state.messages)
+            content = llm.complete(self._model, system, state.messages, self._thinking_budget)
             parsed = self._parse_llm_response(content)
         except Exception:
             logger.exception("LLM call failed for %s", state.conversation_id)
@@ -140,7 +142,7 @@ class EmailAgent:
         system = build_system_prompt(self._kb, state)
 
         try:
-            content = llm.complete(self._model, system, state.messages)
+            content = llm.complete(self._model, system, state.messages, self._thinking_budget)
             parsed = self._parse_llm_response(content)
         except Exception:
             logger.exception("LLM call failed (post-completion) for %s", state.conversation_id)
