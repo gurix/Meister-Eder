@@ -67,7 +67,7 @@ _notifier = AdminNotifier(
 _WELCOME_DE = (
     "Hallo! Ich bin der Anmeldeassistent der Spielgruppe Pumuckl. "
     "Ich kann dir helfen, dein Kind anzumelden, oder deine Fragen zur Spielgruppe beantworten.\n\n"
-    "Du kannst mir auf Deutsch oder Englisch schreiben — ich antworte in derselben Sprache.\n\n"
+    "Du kannst mir auf die Sprache schreiben die du am besten kannst — ich antworte in derselben Sprache.\n\n"
     "Womit kann ich dir helfen?"
 )
 

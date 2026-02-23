@@ -8,7 +8,7 @@ Ich helfe dir, dein Kind für die Spielgruppe anzumelden — schnell und unkompl
 
 - **Anmeldung**: Ich führe dich Schritt für Schritt durch die Anmeldung
 - **Fragen beantworten**: Preise, Zeiten, Reglement — frag einfach
-- **Deutsch oder Englisch**: Schreib in der Sprache, die dir lieber ist
+- **Deutsch oder jede andere Sprache**: Schreib in der Sprache, die dir lieber ist
 
 ## Spielgruppen
 
