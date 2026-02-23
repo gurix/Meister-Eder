@@ -1,0 +1,57 @@
+subject: "Registration Confirmation – Spielgruppe Pumuckl"
+greeting: "Dear {name}"
+intro: >-
+  Your registration with Spielgruppe Pumuckl has been received.
+  Here is a summary:
+
+child_section: "Child Details"
+child_name: "Name"
+child_dob: "Date of birth"
+child_needs: "Special needs"
+
+booking_section: "Playgroup Booking"
+booking_type: "Type"
+booking_days: "Days"
+
+fees_section: "Fees"
+monthly_fee: "Monthly subscription"
+reg_fee: "Registration fee (one-time, first year)"
+reg_fee_amount: "CHF 80.00"
+deposit: "Cleaning deposit – indoor (refundable)"
+deposit_amount: "CHF 50.00"
+
+parent_section: "Your Contact Details"
+parent_name: "Name"
+parent_address: "Address"
+parent_phone: "Phone"
+parent_email: "Email"
+
+emergency_section: "Emergency Contact"
+emergency_name: "Name"
+emergency_phone: "Phone"
+
+payment_section: "Payment Details"
+payment_intro: >-
+  Please transfer the registration fee of <strong>CHF&nbsp;80.00</strong> to the account below.
+  You can scan the QR code with your banking app:
+payment_intro_text: "Please transfer the registration fee of CHF 80.00 to the following account:"
+iban_label: "IBAN"
+payee_label: "Payee"
+amount_label: "Amount"
+
+closing: |
+  If you have any questions, we are happy to help. We look forward to welcoming your child!
+
+  Kind regards
+  Spielgruppe Pumuckl
+
+none: "None"
+
+days:
+  monday: "Monday"
+  wednesday: "Wednesday"
+  thursday: "Thursday"
+
+types:
+  indoor: "Indoor Playgroup"
+  outdoor: "Forest Playgroup"
