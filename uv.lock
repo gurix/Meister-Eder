@@ -1083,10 +1083,12 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "chainlit" },
+    { name = "jinja2" },
     { name = "jsonschema" },
     { name = "litellm" },
     { name = "pillow" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "qrbill" },
 ]
 
@@ -1100,10 +1102,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "chainlit", specifier = ">=2.9.6" },
+    { name = "jinja2", specifier = ">=3.0.0" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "litellm", specifier = ">=1.0.0" },
     { name = "pillow", specifier = ">=12.1.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "qrbill", specifier = ">=1.2.0" },
 ]
 
