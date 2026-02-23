@@ -61,6 +61,7 @@ def build_components(config: Config):
         indoor_email=config.admin_email_indoor,
         outdoor_email=config.admin_email_outdoor,
         cc_emails=[e.strip() for e in config.admin_email_cc.split(",") if e.strip()],
+        model=config.simple_model,
     )
 
     agent = EmailAgent(

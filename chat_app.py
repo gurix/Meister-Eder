@@ -58,6 +58,7 @@ _notifier = AdminNotifier(
     indoor_email=_config.admin_email_indoor,
     outdoor_email=_config.admin_email_outdoor,
     cc_emails=[e.strip() for e in _config.admin_email_cc.split(",") if e.strip()],
+    model=_config.simple_model,
 )
 
 # ---------------------------------------------------------------------------
