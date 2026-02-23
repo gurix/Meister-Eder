@@ -104,15 +104,7 @@ def calculate_monthly_fee(registration: RegistrationData) -> str:
     """Compute the monthly fee string from the booking selection."""
     indoor_days = sum(1 for d in registration.booking.selected_days if d.type == "indoor")
     outdoor_days = sum(1 for d in registration.booking.selected_days if d.type == "outdoor")
-    fee = 0
-    if indoor_days == 1:
-        fee += 130
-    elif indoor_days == 2:
-        fee += 260
-    elif indoor_days >= 3:
-        fee += 390
-    if outdoor_days >= 1:
-        fee += 250
+    fee = indoor_days * 130 + outdoor_days * 250
     return f"CHF {fee}.-"
 
 
