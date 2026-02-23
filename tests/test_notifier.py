@@ -1,6 +1,7 @@
 """Tests for AdminNotifier and notification helper functions."""
 
 import email
+import json
 from email.header import decode_header
 
 import pytest
@@ -10,8 +11,9 @@ from src.notifications.context import (
     calculate_age,
     calculate_monthly_fee,
     format_types,
-    load_strings,
+    build_parent_context,
 )
+from src.notifications.i18n import get_strings, clear_cache
 from src.notifications.renderer import render_template
 from src.models.registration import RegistrationData, Booking, BookingDay
 
@@ -27,6 +29,14 @@ def _decoded_subject(msg_str: str) -> str:
     )
 
 
+@pytest.fixture(autouse=True)
+def reset_translation_cache():
+    """Clear the in-memory translation cache before every test."""
+    clear_cache()
+    yield
+    clear_cache()
+
+
 @pytest.fixture
 def notifier():
     return AdminNotifier(
@@ -39,6 +49,18 @@ def notifier():
         indoor_email="andrea@example.com",
         outdoor_email="barbara@example.com",
         cc_emails=["markus@example.com"],
+    )
+
+
+@pytest.fixture
+def notifier_no_smtp():
+    """Notifier in dev mode (no SMTP host)."""
+    return AdminNotifier(
+        smtp_host="",
+        smtp_port=587,
+        username="",
+        password="",
+        from_email="agent@example.com",
     )
 
 
@@ -160,20 +182,68 @@ class TestSend:
 
 
 # ---------------------------------------------------------------------------
-# notify_parent — parent confirmation email
+# get_strings — i18n / LLM translation
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def notifier_no_smtp():
-    """Notifier in dev mode (no SMTP host)."""
-    return AdminNotifier(
-        smtp_host="",
-        smtp_port=587,
-        username="",
-        password="",
-        from_email="agent@example.com",
-    )
+class TestGetStrings:
+    def test_german_loads_from_yaml_without_llm(self, mocker):
+        """German must never trigger an LLM call."""
+        mock_litellm = mocker.patch("litellm.completion")
+        strings = get_strings("de", "some-model")
+        mock_litellm.assert_not_called()
+        assert strings["subject"] == "Anmeldebestätigung – Spielgruppe Pumuckl"
+
+    def test_other_language_calls_llm(self, mocker):
+        """Non-German languages should call litellm.completion."""
+        german = get_strings("de", "some-model")
+        translated = {**german, "subject": "Registration Confirmation – Spielgruppe Pumuckl"}
+        mock_litellm = mocker.patch("litellm.completion")
+        mock_litellm.return_value.choices[0].message.content = json.dumps(translated)
+
+        result = get_strings("en", "some-model")
+
+        mock_litellm.assert_called_once()
+        assert result["subject"] == "Registration Confirmation – Spielgruppe Pumuckl"
+
+    def test_result_is_cached(self, mocker):
+        """The LLM is only called once per language per process lifetime."""
+        german = get_strings("de", "some-model")
+        mock_litellm = mocker.patch("litellm.completion")
+        mock_litellm.return_value.choices[0].message.content = json.dumps(german)
+
+        get_strings("fr", "some-model")
+        get_strings("fr", "some-model")
+
+        assert mock_litellm.call_count == 1
+
+    def test_llm_failure_falls_back_to_german(self, mocker):
+        """If the LLM raises, the German strings are returned silently."""
+        mocker.patch("litellm.completion", side_effect=RuntimeError("network error"))
+
+        result = get_strings("it", "some-model")
+
+        assert result["subject"] == "Anmeldebestätigung – Spielgruppe Pumuckl"
+
+    def test_passthrough_keys_not_altered(self, mocker):
+        """reg_fee_amount and deposit_amount must survive translation unchanged."""
+        german = get_strings("de", "some-model")
+        # Return translation that omits passthrough keys (as the LLM would)
+        without_passthrough = {k: v for k, v in german.items()
+                               if k not in {"reg_fee_amount", "deposit_amount"}}
+        mocker.patch("litellm.completion").return_value.choices[0].message.content = (
+            json.dumps(without_passthrough)
+        )
+
+        result = get_strings("en", "some-model")
+
+        assert result["reg_fee_amount"] == "CHF 80.00"
+        assert result["deposit_amount"] == "CHF 50.00"
+
+
+# ---------------------------------------------------------------------------
+# notify_parent — parent confirmation email
+# ---------------------------------------------------------------------------
 
 
 class TestNotifyParent:
@@ -190,7 +260,7 @@ class TestNotifyParent:
         assert "anna.muster@example.com" in recipients
 
     def test_notify_parent_german_subject(self, notifier, complete_registration, mocker):
-        """German language produces a German subject line."""
+        """German language produces a German subject line without any LLM call."""
         mock_smtp_cls = mocker.patch("smtplib.SMTP")
         captured = {}
 
@@ -204,7 +274,13 @@ class TestNotifyParent:
         assert "Anmeldebestätigung" in _decoded_subject(captured["msg"])
 
     def test_notify_parent_english_subject(self, notifier, complete_registration, mocker):
-        """English language produces an English subject line."""
+        """English language produces an English subject line via LLM translation."""
+        german = get_strings("de", "some-model")
+        english = {**german, "subject": "Registration Confirmation – Spielgruppe Pumuckl"}
+        mocker.patch("litellm.completion").return_value.choices[0].message.content = (
+            json.dumps(english)
+        )
+
         mock_smtp_cls = mocker.patch("smtplib.SMTP")
         captured = {}
 
@@ -220,7 +296,9 @@ class TestNotifyParent:
     def test_notify_parent_unknown_language_falls_back_to_de(
         self, notifier, complete_registration, mocker
     ):
-        """Unsupported language codes fall back to German."""
+        """When the LLM call fails, the email is sent in German."""
+        mocker.patch("litellm.completion", side_effect=RuntimeError("timeout"))
+
         mock_smtp_cls = mocker.patch("smtplib.SMTP")
         captured = {}
 
@@ -243,18 +321,9 @@ class TestNotifyParent:
 
         mock_smtp_cls.assert_not_called()
 
-    def test_notify_parent_text_body_contains_iban(self, complete_registration):
-        """Plain-text body includes the IBAN so payment is possible without the QR image."""
-        strings = load_strings("de")
-        from src.notifications.context import build_parent_context
-        ctx = build_parent_context(complete_registration, strings, has_qr=False)
-        text = render_template("parent_confirmation.txt.j2", ctx)
-        assert "CH14" in text
-
-    def test_notify_parent_text_body_english_contains_iban(self, complete_registration):
-        """English plain-text body also includes the IBAN."""
-        strings = load_strings("en")
-        from src.notifications.context import build_parent_context
+    def test_text_body_contains_iban(self, complete_registration):
+        """Rendered plain-text body includes the IBAN regardless of language."""
+        strings = get_strings("de", "some-model")
         ctx = build_parent_context(complete_registration, strings, has_qr=False)
         text = render_template("parent_confirmation.txt.j2", ctx)
         assert "CH14" in text

@@ -23,8 +23,8 @@ from .context import (
     build_admin_update_context,
     build_parent_context,
     format_types,
-    load_strings,
 )
+from .i18n import get_strings
 from .renderer import render_template
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,7 @@ class AdminNotifier:
         indoor_email: str = "",
         outdoor_email: str = "",
         cc_emails: list[str] | None = None,
+        model: str = "anthropic/claude-haiku-4-5-20251001",
     ) -> None:
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
@@ -61,6 +62,7 @@ class AdminNotifier:
         self._indoor_email = indoor_email
         self._outdoor_email = outdoor_email
         self._cc_emails: list[str] = cc_emails or []
+        self._model = model
 
     # ------------------------------------------------------------------
     # Public API
@@ -140,7 +142,7 @@ class AdminNotifier:
             logger.warning("No parent email in registration — confirmation not sent.")
             return
 
-        strings = load_strings(language)
+        strings = get_strings(language, self._model)
 
         try:
             qr_png = self._generate_qr_bill_png()

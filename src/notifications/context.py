@@ -1,9 +1,6 @@
 """Pure functions for building email context dicts from registration data."""
 
 from datetime import date, datetime
-from pathlib import Path
-
-import yaml
 
 from ..models.registration import RegistrationData
 
@@ -16,22 +13,6 @@ QR_PAYEE = "Familienverein Fällanden Spielgruppen"
 QR_STREET = "Huebwisstrase 5"
 QR_PCODE = "8117"
 QR_CITY = "Fällanden"
-
-_I18N_DIR = Path(__file__).parent / "i18n"
-
-# ---------------------------------------------------------------------------
-# i18n
-# ---------------------------------------------------------------------------
-
-
-def load_strings(language: str) -> dict:
-    """Load the label/string table for *language* (falls back to German)."""
-    locale_file = _I18N_DIR / f"{language}.yaml"
-    if not locale_file.exists():
-        locale_file = _I18N_DIR / "de.yaml"
-    with locale_file.open(encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
-
 
 # ---------------------------------------------------------------------------
 # Formatting helpers (pure functions, no side-effects)
