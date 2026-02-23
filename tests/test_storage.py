@@ -157,3 +157,20 @@ class TestRegistrationVersioning:
         store.save_registration(fresh_state)
         registrations = store.list_registrations()
         assert len(registrations) == 1
+
+    def test_save_registration_persists_language(self, store, fresh_state, complete_registration):
+        fresh_state.registration = complete_registration
+        fresh_state.completed = True
+        fresh_state.language = "en"
+        store.save_registration(fresh_state)
+        current = store.get_current_registration(fresh_state.parent_email)
+        assert current is not None
+        assert current["metadata"]["language"] == "en"
+
+    def test_save_registration_defaults_language_to_de(self, store, fresh_state, complete_registration):
+        fresh_state.registration = complete_registration
+        fresh_state.completed = True
+        # language defaults to "de" in ConversationState
+        store.save_registration(fresh_state)
+        current = store.get_current_registration(fresh_state.parent_email)
+        assert current["metadata"]["language"] == "de"

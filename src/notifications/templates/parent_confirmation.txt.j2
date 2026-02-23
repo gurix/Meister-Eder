@@ -1,0 +1,51 @@
+{{ greeting }},
+
+{{ strings.intro }}
+
+===============================================
+{{ strings.child_section | upper }}
+===============================================
+{{ strings.child_name }}: {{ child_name }}
+{{ strings.child_dob }}: {{ child_dob }}
+{{ strings.child_needs }}: {{ child_needs }}
+
+===============================================
+{{ strings.booking_section | upper }}
+===============================================
+{{ strings.booking_type }}: {{ playgroup_types }}
+{{ strings.booking_days }}: {{ days }}
+
+===============================================
+{{ strings.fees_section | upper }}
+===============================================
+{{ strings.monthly_fee }}: {{ monthly_fee }}
+{{ strings.reg_fee }}: {{ strings.reg_fee_amount }}
+{% if has_indoor %}{{ strings.deposit }}: {{ strings.deposit_amount }}
+{% endif %}
+===============================================
+{{ strings.payment_section | upper }}
+===============================================
+{{ strings.payment_intro_text }}
+
+  {{ strings.iban_label }}: {{ iban }}
+  {{ strings.payee_label }}: {{ payee }}
+             {{ payee_street }}, {{ payee_postal_code }} {{ payee_city }}
+  {{ strings.amount_label }}: CHF 80.00
+
+===============================================
+{{ strings.parent_section | upper }}
+===============================================
+{{ strings.parent_name }}: {{ parent_name }}
+{{ strings.parent_address }}: {{ parent_address }}, {{ parent_postal_code }} {{ parent_city }}
+{{ strings.parent_phone }}: {{ parent_phone }}
+{{ strings.parent_email }}: {{ parent_email }}
+
+===============================================
+{{ strings.emergency_section | upper }}
+===============================================
+{{ strings.emergency_name }}: {{ emergency_name }}
+{{ strings.emergency_phone }}: {{ emergency_phone }}
+
+-----------------------------------------------
+
+{{ strings.closing }}

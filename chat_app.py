@@ -58,6 +58,7 @@ _notifier = AdminNotifier(
     indoor_email=_config.admin_email_indoor,
     outdoor_email=_config.admin_email_outdoor,
     cc_emails=[e.strip() for e in _config.admin_email_cc.split(",") if e.strip()],
+    model=_config.simple_model,
 )
 
 # ---------------------------------------------------------------------------
@@ -171,6 +172,15 @@ async def on_message(message: cl.Message) -> None:
         except Exception:
             logger.exception(
                 "Failed to save/notify for session %s", state.conversation_id
+            )
+        try:
+            _notifier.notify_parent(
+                registration=state.registration,
+                language=state.language,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send parent confirmation for session %s", state.conversation_id
             )
 
     # --- Handle post-completion update intent ---

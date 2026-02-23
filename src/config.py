@@ -1,8 +1,11 @@
 """Configuration loaded from environment variables."""
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 try:
     from dotenv import load_dotenv
@@ -13,9 +16,16 @@ except ImportError:
 
 @dataclass
 class Config:
-    # AI model — litellm format, e.g. "anthropic/claude-opus-4-6" or "openai/gpt-4o".
+    # Primary model for conversation with parents — litellm format.
     # The matching API key must be set as an env var (ANTHROPIC_API_KEY, OPENAI_API_KEY, …).
+    # Example: "anthropic/claude-opus-4-6", "google/gemini-2.0-flash", "openai/gpt-4o"
     ai_model: str = "anthropic/claude-opus-4-6"
+
+    # Lightweight model for simple tasks such as email-label translation.
+    # Can be from a different provider than ai_model.
+    # If not configured (SIMPLE_MODEL env var unset), falls back to ai_model with a warning.
+    # Example: "anthropic/claude-haiku-4-5-20251001", "openai/gpt-4o-mini"
+    simple_model: str = ""
 
     # Email — IMAP (receiving)
     imap_host: str = ""
@@ -57,8 +67,18 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
+        ai_model = os.getenv("AI_MODEL", "anthropic/claude-opus-4-6")
+        simple_model = os.getenv("SIMPLE_MODEL", "")
+        if not simple_model:
+            logger.warning(
+                "SIMPLE_MODEL not configured — falling back to AI_MODEL (%s) for simple tasks "
+                "(set SIMPLE_MODEL to a cheaper model, e.g. anthropic/claude-haiku-4-5-20251001)",
+                ai_model,
+            )
+            simple_model = ai_model
         return cls(
-            ai_model=os.getenv("AI_MODEL", "anthropic/claude-opus-4-6"),
+            ai_model=ai_model,
+            simple_model=simple_model,
             imap_host=os.getenv("IMAP_HOST", ""),
             imap_port=int(os.getenv("IMAP_PORT", "993")),
             imap_username=os.getenv("IMAP_USERNAME", ""),

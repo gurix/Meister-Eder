@@ -1,12 +1,31 @@
-"""Admin email notifications — new registrations and registration updates."""
+"""Admin email notifications — new registrations, updates, and parent confirmations."""
 
+import io
 import logging
 import smtplib
-from datetime import date, datetime
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import qrcode
+import qrcode.constants
+from PIL import Image, ImageDraw
+from qrbill import QRBill
+
 from ..models.registration import RegistrationData
+from .context import (
+    QR_CITY,
+    QR_IBAN,
+    QR_PAYEE,
+    QR_PCODE,
+    QR_STREET,
+    build_admin_new_context,
+    build_admin_update_context,
+    build_parent_context,
+    format_types,
+)
+from .i18n import get_strings
+from .renderer import render_template
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +51,7 @@ class AdminNotifier:
         indoor_email: str = "",
         outdoor_email: str = "",
         cc_emails: list[str] | None = None,
+        model: str = "anthropic/claude-haiku-4-5-20251001",
     ) -> None:
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
@@ -42,6 +62,7 @@ class AdminNotifier:
         self._indoor_email = indoor_email
         self._outdoor_email = outdoor_email
         self._cc_emails: list[str] = cc_emails or []
+        self._model = model
 
     # ------------------------------------------------------------------
     # Public API
@@ -67,9 +88,10 @@ class AdminNotifier:
 
         subject = (
             f"Neue Anmeldung: {registration.child.full_name} "
-            f"– {self._format_types(types)}"
+            f"– {format_types(types)}"
         )
-        body = self._build_new_body(registration, registration_id, version, channel)
+        ctx = build_admin_new_context(registration, registration_id, version, channel)
+        body = render_template("admin_new.txt.j2", ctx)
 
         self._send(
             to=to_addresses,
@@ -98,7 +120,8 @@ class AdminNotifier:
             return
 
         subject = f"Anmeldung aktualisiert: {registration.child.full_name}"
-        body = self._build_update_body(registration, registration_id, version, change_summary)
+        ctx = build_admin_update_context(registration, registration_id, version, change_summary)
+        body = render_template("admin_update.txt.j2", ctx)
 
         self._send(
             to=to_addresses,
@@ -107,6 +130,80 @@ class AdminNotifier:
             body=body,
             reply_to=registration.parent_guardian.email or "",
         )
+
+    def notify_parent(
+        self,
+        registration: RegistrationData,
+        language: str = "de",
+    ) -> None:
+        """Send an HTML confirmation email to the parent with registration summary and QR-bill."""
+        parent_email = registration.parent_guardian.email
+        if not parent_email:
+            logger.warning("No parent email in registration — confirmation not sent.")
+            return
+
+        strings = get_strings(language, self._model)
+
+        try:
+            qr_png = self._generate_qr_bill_png()
+        except Exception:
+            logger.exception("Failed to generate QR-bill PNG — omitting image from confirmation")
+            qr_png = None
+
+        ctx = build_parent_context(registration, strings, has_qr=qr_png is not None)
+        html_body = render_template("parent_confirmation.html.j2", ctx)
+        text_body = render_template("parent_confirmation.txt.j2", ctx)
+        subject = strings["subject"]
+
+        if not self._smtp_host:
+            logger.warning(
+                "SMTP not configured — parent confirmation NOT sent. Would have emailed %s: %s",
+                parent_email,
+                subject,
+            )
+            logger.debug("Parent confirmation body:\n%s", text_body)
+            return
+
+        # MIME structure:
+        # multipart/mixed
+        # └── multipart/alternative
+        #     ├── text/plain  (fallback)
+        #     └── multipart/related
+        #         ├── text/html  (references cid:qrbill)
+        #         └── image/png  (Content-ID: qrbill, inline)
+        msg_outer = MIMEMultipart("mixed")
+        msg_outer["From"] = self._from_email
+        msg_outer["To"] = parent_email
+        msg_outer["Subject"] = subject
+
+        msg_alt = MIMEMultipart("alternative")
+        msg_alt.attach(MIMEText(text_body, "plain", "utf-8"))
+
+        if qr_png is not None:
+            msg_related = MIMEMultipart("related")
+            msg_related.attach(MIMEText(html_body, "html", "utf-8"))
+            img_part = MIMEImage(qr_png, "png")
+            img_part.add_header("Content-ID", "<qrbill>")
+            img_part.add_header("Content-Disposition", "inline", filename="qrbill.png")
+            msg_related.attach(img_part)
+            msg_alt.attach(msg_related)
+        else:
+            msg_alt.attach(MIMEText(html_body, "html", "utf-8"))
+
+        msg_outer.attach(msg_alt)
+
+        try:
+            if self._use_tls:
+                server = smtplib.SMTP(self._smtp_host, self._smtp_port)
+                server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(self._smtp_host, self._smtp_port)
+            server.login(self._username, self._password)
+            server.sendmail(self._from_email, [parent_email], msg_outer.as_string())
+            server.quit()
+            logger.info("Parent confirmation sent to %s", parent_email)
+        except Exception:
+            logger.exception("Failed to send parent confirmation to %s", parent_email)
 
     # ------------------------------------------------------------------
     # Routing helpers
@@ -122,178 +219,58 @@ class AdminNotifier:
         return recipients
 
     # ------------------------------------------------------------------
-    # Formatting helpers
+    # QR-bill generation
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _format_types(types: list[str]) -> str:
-        has_indoor = "indoor" in types
-        has_outdoor = "outdoor" in types
-        if has_indoor and has_outdoor:
-            return "Innen- und Waldspielgruppe"
-        if has_indoor:
-            return "Innenspielgruppe"
-        if has_outdoor:
-            return "Waldspielgruppe"
-        return "Spielgruppe"
+    def _generate_qr_bill_png() -> bytes:
+        """Generate a Swiss QR-bill payment QR code as a PNG image.
 
-    @staticmethod
-    def _calculate_age(dob_str: str) -> str:
-        try:
-            dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
-            today = date.today()
-            years = today.year - dob.year - (
-                (today.month, today.day) < (dob.month, dob.day)
-            )
-            months = (today.month - dob.month) % 12
-            return f"{years} Jahre, {months} Monate"
-        except Exception:
-            return dob_str
+        Uses the fixed registration fee payment data (CHF 80.00).
+        The QR code includes the Swiss cross overlay as required by the SIX Group standard.
 
-    @staticmethod
-    def _format_dob(dob_str: str) -> str:
-        try:
-            return datetime.strptime(dob_str, "%Y-%m-%d").strftime("%d.%m.%Y")
-        except Exception:
-            return dob_str or ""
-
-    @staticmethod
-    def _calculate_monthly_fee(registration: RegistrationData) -> str:
-        indoor_days = sum(1 for d in registration.booking.selected_days if d.type == "indoor")
-        outdoor_days = sum(1 for d in registration.booking.selected_days if d.type == "outdoor")
-        fee = 0
-        if indoor_days == 1:
-            fee += 130
-        elif indoor_days == 2:
-            fee += 260
-        elif indoor_days >= 3:
-            fee += 390
-        if outdoor_days >= 1:
-            fee += 250
-        return f"CHF {fee}.-"
-
-    @staticmethod
-    def _format_days(registration: RegistrationData) -> str:
-        day_map = {"monday": "Montag", "wednesday": "Mittwoch", "thursday": "Donnerstag"}
-        type_map = {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"}
-        return ", ".join(
-            f"{day_map.get(d.day, d.day.capitalize())} ({type_map.get(d.type, d.type)})"
-            for d in registration.booking.selected_days
+        Returns:
+            PNG image bytes of the QR code.
+        """
+        bill = QRBill(
+            account=QR_IBAN,
+            creditor={
+                "name": QR_PAYEE,
+                "street": QR_STREET,
+                "pcode": QR_PCODE,
+                "city": QR_CITY,
+                "country": "CH",
+            },
+            amount="80.00",
+            currency="CHF",
         )
+        payload = bill.qr_data()
 
-    @staticmethod
-    def _format_change_summary(change_summary: dict) -> str:
-        """Render field changes as a human-readable list."""
-        lines = []
-        for field_path, values in sorted(change_summary.items()):
-            old_val, new_val = values["old"], values["new"]
-            lines.append(f"  {field_path}:")
-            lines.append(f"    Alt: {old_val}")
-            lines.append(f"    Neu: {new_val}")
-        return "\n".join(lines) if lines else "  (keine Änderungen erkannt)"
-
-    # ------------------------------------------------------------------
-    # Email body builders
-    # ------------------------------------------------------------------
-
-    def _build_new_body(
-        self,
-        registration: RegistrationData,
-        registration_id: str,
-        version: int,
-        channel: str,
-    ) -> str:
-        now = datetime.utcnow()
-        pg = registration.parent_guardian
-        ec = registration.emergency_contact
-        channel_de = {"email": "E-Mail", "chat": "Chat"}.get(channel.lower(), channel.title())
-
-        return (
-            "===============================================\n"
-            "NEUE SPIELGRUPPEN-ANMELDUNG\n"
-            "===============================================\n"
-            "\n"
-            f"Eingereicht:     {now.strftime('%d.%m.%Y')} um {now.strftime('%H:%M')} Uhr (UTC)\n"
-            f"Kanal:           {channel_de}\n"
-            f"Anmelde-ID:      {registration_id}  (Version {version})\n"
-            "\n"
-            "-----------------------------------------------\n"
-            "ANGABEN ZUM KIND\n"
-            "-----------------------------------------------\n"
-            f"Name:            {registration.child.full_name}\n"
-            f"Geburtsdatum:    {self._format_dob(registration.child.date_of_birth or '')} "
-            f"(Alter: {self._calculate_age(registration.child.date_of_birth or '')})\n"
-            f"Bes. Bedürfnisse: {registration.child.special_needs or 'Keine'}\n"
-            "\n"
-            "-----------------------------------------------\n"
-            "SPIELGRUPPEN-AUSWAHL\n"
-            "-----------------------------------------------\n"
-            f"Art:             {self._format_types(registration.booking.playgroup_types)}\n"
-            f"Tage:            {self._format_days(registration)}\n"
-            "\n"
-            f"Monatlicher Beitrag: {self._calculate_monthly_fee(registration)}\n"
-            "(Zzgl. CHF 80 Anmeldegebühr bei Erstanmeldung)\n"
-            "\n"
-            "-----------------------------------------------\n"
-            "ELTERN / ERZIEHUNGSBERECHTIGTE\n"
-            "-----------------------------------------------\n"
-            f"Name:            {pg.full_name}\n"
-            f"Adresse:         {pg.street_address}\n"
-            f"                 {pg.postal_code} {pg.city}\n"
-            f"Telefon:         {pg.phone}\n"
-            f"E-Mail:          {pg.email}\n"
-            "\n"
-            "-----------------------------------------------\n"
-            "NOTFALLKONTAKT\n"
-            "-----------------------------------------------\n"
-            f"Name:            {ec.full_name}\n"
-            f"Telefon:         {ec.phone}\n"
-            "\n"
-            "===============================================\n"
-            "\n"
-            "Diese Anmeldung wurde über den automatischen Anmeldeassistenten eingereicht.\n"
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,
+            border=4,
         )
+        qr.add_data(payload)
+        qr.make(fit=True)
+        pil_img: Image.Image = qr.make_image(fill_color="black", back_color="white").get_image()
+        pil_img = pil_img.convert("RGB")
 
-    def _build_update_body(
-        self,
-        registration: RegistrationData,
-        registration_id: str,
-        version: int,
-        change_summary: dict,
-    ) -> str:
-        now = datetime.utcnow()
-        pg = registration.parent_guardian
+        # Overlay Swiss cross in center (SIX Group standard)
+        w, h = pil_img.size
+        cross_size = max(int(w * 0.15), 20)
+        cx, cy = w // 2, h // 2
+        half = cross_size // 2
+        bar = cross_size // 5
+        draw = ImageDraw.Draw(pil_img)
+        draw.rectangle([cx - half, cy - half, cx + half, cy + half], fill="white")
+        draw.rectangle([cx - bar // 2, cy - half, cx + bar // 2, cy + half], fill="#FF0000")
+        draw.rectangle([cx - half, cy - bar // 2, cx + half, cy + bar // 2], fill="#FF0000")
 
-        return (
-            "===============================================\n"
-            "ANMELDUNGS-AKTUALISIERUNG\n"
-            "===============================================\n"
-            "\n"
-            f"Aktualisiert:    {now.strftime('%d.%m.%Y')} um {now.strftime('%H:%M')} Uhr (UTC)\n"
-            f"Anmelde-ID:      {registration_id}  (Version {version})\n"
-            f"Kind:            {registration.child.full_name}\n"
-            f"Eltern-E-Mail:   {pg.email}\n"
-            "\n"
-            "-----------------------------------------------\n"
-            "WAS HAT SICH GEÄNDERT\n"
-            "-----------------------------------------------\n"
-            f"{self._format_change_summary(change_summary)}\n"
-            "\n"
-            "-----------------------------------------------\n"
-            "AKTUELLE ANMELDUNG (nach Aktualisierung)\n"
-            "-----------------------------------------------\n"
-            f"Spielgruppe:     {self._format_types(registration.booking.playgroup_types)}\n"
-            f"Tage:            {self._format_days(registration)}\n"
-            f"Monatl. Beitrag: {self._calculate_monthly_fee(registration)}\n"
-            "\n"
-            f"Elternteil:      {pg.full_name}\n"
-            f"Adresse:         {pg.street_address}, {pg.postal_code} {pg.city}\n"
-            f"Telefon:         {pg.phone}\n"
-            "\n"
-            "===============================================\n"
-            "\n"
-            "Diese Aktualisierung wurde über den automatischen Anmeldeassistenten eingereicht.\n"
-        )
+        buf = io.BytesIO()
+        pil_img.save(buf, format="PNG")
+        return buf.getvalue()
 
     # ------------------------------------------------------------------
     # SMTP dispatch

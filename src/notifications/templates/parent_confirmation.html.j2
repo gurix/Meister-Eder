@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;padding:20px;">
+
+<div style="background:#2e7d32;color:white;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+  <h1 style="margin:0;font-size:22px;">Spielgruppe Pumuckl</h1>
+  <p style="margin:4px 0 0;font-size:13px;opacity:.85;">Familienverein Fällanden</p>
+</div>
+
+<div style="background:white;border:1px solid #e0e0e0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
+
+  <p>{{ greeting }},</p>
+  <p>{{ strings.intro }}</p>
+
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.child_section }}</h2>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;color:#666;width:55%;">{{ strings.child_name }}</td><td>{{ child_name }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.child_dob }}</td><td>{{ child_dob }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.child_needs }}</td><td>{{ child_needs }}</td></tr>
+  </table>
+
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.booking_section }}</h2>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;color:#666;width:55%;">{{ strings.booking_type }}</td><td>{{ playgroup_types }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.booking_days }}</td><td>{{ days }}</td></tr>
+  </table>
+
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.fees_section }}</h2>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;color:#666;width:55%;">{{ strings.monthly_fee }}</td><td>{{ monthly_fee }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.reg_fee }}</td><td>{{ strings.reg_fee_amount }}</td></tr>
+    {% if has_indoor %}
+    <tr><td style="padding:4px 0;color:#666;width:55%;">{{ strings.deposit }}</td><td>{{ strings.deposit_amount }}</td></tr>
+    {% endif %}
+  </table>
+
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.payment_section }}</h2>
+  <p>{{ strings.payment_intro | safe }}</p>
+  <table style="width:100%;border-collapse:collapse;background:#f8f8f8;border-radius:4px;">
+    <tr>
+      <td style="padding:8px;color:#666;width:40%;border-bottom:1px solid #e0e0e0;">{{ strings.iban_label }}</td>
+      <td style="padding:8px;font-family:monospace;font-weight:bold;border-bottom:1px solid #e0e0e0;">{{ iban }}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;color:#666;border-bottom:1px solid #e0e0e0;">{{ strings.payee_label }}</td>
+      <td style="padding:8px;border-bottom:1px solid #e0e0e0;">{{ payee }}<br>{{ payee_street }}, {{ payee_postal_code }} {{ payee_city }}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;color:#666;">{{ strings.amount_label }}</td>
+      <td style="padding:8px;font-weight:bold;">CHF 80.00</td>
+    </tr>
+  </table>
+  {% if has_qr %}
+  <div style="text-align:center;margin:20px 0;">
+    <img src="cid:qrbill" alt="Swiss QR-Bill" style="max-width:380px;width:100%;border:1px solid #e0e0e0;">
+  </div>
+  {% endif %}
+
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.parent_section }}</h2>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;color:#666;width:55%;">{{ strings.parent_name }}</td><td>{{ parent_name }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.parent_address }}</td><td>{{ parent_address }}, {{ parent_postal_code }} {{ parent_city }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.parent_phone }}</td><td>{{ parent_phone }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.parent_email }}</td><td>{{ parent_email }}</td></tr>
+  </table>
+
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.emergency_section }}</h2>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr><td style="padding:4px 0;color:#666;width:55%;">{{ strings.emergency_name }}</td><td>{{ emergency_name }}</td></tr>
+    <tr><td style="padding:4px 0;color:#666;">{{ strings.emergency_phone }}</td><td>{{ emergency_phone }}</td></tr>
+  </table>
+
+  <p style="margin-top:24px;white-space:pre-line;">{{ strings.closing }}</p>
+
+</div>
+</body>
+</html>

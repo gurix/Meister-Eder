@@ -1,0 +1,57 @@
+subject: "Anmeldebestätigung – Spielgruppe Pumuckl"
+greeting: "Guten Tag {name}"
+intro: >-
+  Deine Anmeldung für die Spielgruppe Pumuckl ist bei uns eingegangen.
+  Hier ist eine Zusammenfassung:
+
+child_section: "Angaben zum Kind"
+child_name: "Name"
+child_dob: "Geburtsdatum"
+child_needs: "Besondere Bedürfnisse"
+
+booking_section: "Spielgruppen-Buchung"
+booking_type: "Art"
+booking_days: "Tage"
+
+fees_section: "Kosten"
+monthly_fee: "Monatlicher Beitrag"
+reg_fee: "Anmeldegebühr (einmalig, erstes Jahr)"
+reg_fee_amount: "CHF 80.00"
+deposit: "Reinigungsdepot Innen (rückerstattbar)"
+deposit_amount: "CHF 50.00"
+
+parent_section: "Deine Kontaktdaten"
+parent_name: "Name"
+parent_address: "Adresse"
+parent_phone: "Telefon"
+parent_email: "E-Mail"
+
+emergency_section: "Notfallkontakt"
+emergency_name: "Name"
+emergency_phone: "Telefon"
+
+payment_section: "Zahlungsinformationen"
+payment_intro: >-
+  Bitte überweise die Anmeldegebühr von <strong>CHF&nbsp;80.00</strong> auf folgendes Konto.
+  Du kannst den QR-Code mit deiner Banking-App scannen:
+payment_intro_text: "Bitte überweise die Anmeldegebühr von CHF 80.00 auf folgendes Konto:"
+iban_label: "IBAN"
+payee_label: "Empfänger"
+amount_label: "Betrag"
+
+closing: |
+  Bei Fragen stehen wir dir gerne zur Verfügung. Wir freuen uns auf dein Kind!
+
+  Herzliche Grüsse
+  Spielgruppe Pumuckl
+
+none: "Keine"
+
+days:
+  monday: "Montag"
+  wednesday: "Mittwoch"
+  thursday: "Donnerstag"
+
+types:
+  indoor: "Innenspielgruppe"
+  outdoor: "Waldspielgruppe"

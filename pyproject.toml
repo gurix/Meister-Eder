@@ -11,6 +11,10 @@ dependencies = [
     # Registration schema validation
     "jsonschema>=4.23.0",
     "chainlit>=2.9.6",
+    "qrbill>=1.2.0",
+    "pillow>=12.1.1",
+    "jinja2>=3.0.0",
+    "pyyaml>=6.0.0",
 ]
 
 [project.scripts]

@@ -254,6 +254,7 @@ class ConversationStore:
             "channel": "email",
             "parentEmail": state.parent_email,
             "conversationId": state.conversation_id,
+            "language": state.language,
         }
         return record
 

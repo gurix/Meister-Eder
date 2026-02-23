@@ -129,6 +129,13 @@ class EmailAgent:
                 )
             except Exception:
                 logger.exception("Failed to send admin notification for %s", email_key)
+            try:
+                self._notifier.notify_parent(
+                    registration=state.registration,
+                    language=state.language,
+                )
+            except Exception:
+                logger.exception("Failed to send parent confirmation for %s", email_key)
             logger.info("Registration complete for %s", state.conversation_id)
 
         return reply_text

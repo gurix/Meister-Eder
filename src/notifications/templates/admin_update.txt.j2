@@ -1,0 +1,33 @@
+===============================================
+ANMELDUNGS-AKTUALISIERUNG
+===============================================
+
+Aktualisiert:    {{ updated_date }} um {{ updated_time }} Uhr (UTC)
+Anmelde-ID:      {{ registration_id }}  (Version {{ version }})
+Kind:            {{ child_name }}
+Eltern-E-Mail:   {{ parent_email }}
+
+-----------------------------------------------
+WAS HAT SICH GEÄNDERT
+-----------------------------------------------
+{% for change in changes %}
+  {{ change.field }}:
+    Alt: {{ change.old }}
+    Neu: {{ change.new }}
+{% else %}
+  (keine Änderungen erkannt)
+{% endfor %}
+-----------------------------------------------
+AKTUELLE ANMELDUNG (nach Aktualisierung)
+-----------------------------------------------
+Spielgruppe:     {{ playgroup_types }}
+Tage:            {{ days }}
+Monatl. Beitrag: {{ monthly_fee }}
+
+Elternteil:      {{ parent_name }}
+Adresse:         {{ parent_street }}, {{ parent_postal_code }} {{ parent_city }}
+Telefon:         {{ parent_phone }}
+
+===============================================
+
+Diese Aktualisierung wurde über den automatischen Anmeldeassistenten eingereicht.
