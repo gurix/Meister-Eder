@@ -44,7 +44,7 @@ cp .env.example .env
 
 | Variable | Description |
 |---|---|
-| `AI_MODEL` | litellm model string, e.g. `anthropic/claude-opus-4-6` or `openai/gpt-4o` |
+| `AI_MODEL` | Primary model (litellm string), e.g. `anthropic/claude-opus-4-6` |
 | `IMAP_HOST` | IMAP server hostname for receiving parent emails |
 | `IMAP_USERNAME` | Email account username |
 | `IMAP_PASSWORD` | Email account password |
@@ -57,30 +57,37 @@ The API key variable depends on your chosen provider — see [Switching AI provi
 
 | Variable | Default | Description |
 |---|---|---|
+| `SIMPLE_MODEL` | _(falls back to `AI_MODEL`)_ | Lightweight model for simple tasks (e.g. email-label translation). Can be from a different provider. Logs a warning if unset. |
+| `THINKING_BUDGET` | _(disabled)_ | Token budget for extended thinking — Anthropic models only. Recommended: `8000`. |
 | `IMAP_PORT` | `993` | IMAP port |
 | `IMAP_USE_SSL` | `true` | Use SSL for IMAP |
 | `SMTP_PORT` | `587` | SMTP port |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS for SMTP |
+| `CHAINLIT_HOST` | `localhost` | Host the web chat binds to. Set to `0.0.0.0` to expose externally. |
 | `DATA_DIR` | `data/` | Directory for conversation state and completed registrations |
 | `KNOWLEDGE_BASE_DIR` | `openspec/…/knowledge-base` | Path to admin-editable knowledge base markdown files |
 | `POLL_INTERVAL` | `60` | Seconds between inbox polls (only used when running as a daemon) |
 
 ### Switching AI providers
 
-`AI_MODEL` uses [litellm](https://docs.litellm.ai/docs/providers) model strings — any supported provider works without code changes:
+Both `AI_MODEL` and `SIMPLE_MODEL` use [litellm](https://docs.litellm.ai/docs/providers) model strings — any supported provider works without code changes. The two models can be from different providers:
 
 ```bash
-# Anthropic (default)
+# Anthropic for both (default)
 AI_MODEL=anthropic/claude-opus-4-6
+SIMPLE_MODEL=anthropic/claude-haiku-4-5-20251001
 ANTHROPIC_API_KEY=sk-ant-...
 
-# OpenAI
-AI_MODEL=openai/gpt-4o
-OPENAI_API_KEY=sk-...
-
-# Google Gemini
-AI_MODEL=gemini/gemini-2.0-flash
+# Google Gemini for both
+AI_MODEL=gemini/gemini-3-pro-preview
+SIMPLE_MODEL=gemini/gemini-3-flash-preview
 GEMINI_API_KEY=...
+
+# Mixed providers
+AI_MODEL=gemini/gemini-3-pro-preview
+SIMPLE_MODEL=anthropic/claude-haiku-4-5-20251001
+GEMINI_API_KEY=...
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ## Running
@@ -165,4 +172,4 @@ The agent answers parent questions from markdown files in the knowledge base dir
 
 ### Adding a new AI provider
 
-Set `AI_MODEL` to any [litellm-supported model string](https://docs.litellm.ai/docs/providers) and set the corresponding API key environment variable. No code changes required.
+Set `AI_MODEL` (and optionally `SIMPLE_MODEL`) to any [litellm-supported model string](https://docs.litellm.ai/docs/providers) and set the corresponding API key environment variable. No code changes required.
