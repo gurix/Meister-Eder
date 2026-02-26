@@ -98,6 +98,27 @@ def run_poll_loop(agent: EmailAgent, channel: EmailChannel, poll_interval: int) 
             for msg in messages:
                 logger.info("Processing message from %s", msg["from"])
                 try:
+                    # ----------------------------------------------------------
+                    # Bounce / automated-sender guard
+                    # If the channel layer flagged this as an automated message
+                    # (bounce, out-of-office, delivery failure, …) we must NOT
+                    # reply — that would create or worsen an email loop.
+                    # Instead, alert the admin once and drop the message.
+                    # ----------------------------------------------------------
+                    if msg.get("is_automated"):
+                        logger.warning(
+                            "Automated/bounce message from %s — reason: %s — not replying",
+                            msg["from"],
+                            msg.get("automated_reason", "unknown"),
+                        )
+                        agent.handle_automated_message(
+                            sender_email=msg["from"],
+                            subject=msg["subject"],
+                            reason=msg.get("automated_reason", "automated sender detected"),
+                            inbound_message_id=msg["message_id"],
+                        )
+                        continue
+
                     # Prepend email headers so the LLM can extract the
                     # sender's address and subject (e.g. to fill in
                     # parentGuardian.email automatically).

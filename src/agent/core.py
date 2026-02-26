@@ -14,6 +14,11 @@ from .response_parser import apply_updates, fallback_message, parse_llm_response
 
 logger = logging.getLogger(__name__)
 
+# Maximum number of inbound user messages before the conversation is stopped and
+# escalated to the admin.  This prevents runaway loops that slip through automated
+# sender detection (e.g. a forwarding alias that bounces the agent's own replies).
+MAX_USER_MESSAGES = 20
+
 
 class EmailAgent:
     """Processes one inbound email and returns the agent's reply text.
@@ -78,6 +83,43 @@ class EmailAgent:
         # Append the user's message to history
         state.messages.append(ChatMessage(role="user", content=message_text))
 
+        # ------------------------------------------------------------------
+        # Hard message-count cap — stop conversations that have gone on too
+        # long without completing (covers loops that bypass automated-sender
+        # detection, e.g. a broken forwarding alias).
+        # ------------------------------------------------------------------
+        user_msg_count = sum(1 for m in state.messages if m.role == "user")
+        if user_msg_count > MAX_USER_MESSAGES:
+            if not state.loop_escalated:
+                state.loop_escalated = True
+                state.updated_at = now
+                self._store.save(state)
+                reason = (
+                    f"conversation exceeded {MAX_USER_MESSAGES} inbound messages "
+                    f"without completing"
+                )
+                logger.warning(
+                    "Conversation %s exceeded message limit (%d user messages) — escalating",
+                    email_key,
+                    user_msg_count,
+                )
+                try:
+                    self._notifier.notify_loop_escalation(
+                        sender_email=parent_email,
+                        conversation_id=email_key,
+                        reason=reason,
+                        message_count=user_msg_count,
+                    )
+                except Exception:
+                    logger.exception("Failed to send loop escalation notification for %s", email_key)
+            else:
+                logger.warning(
+                    "Conversation %s still exceeding message limit — already escalated, ignoring",
+                    email_key,
+                )
+                self._store.save(state)
+            return ""
+
         # Route to the appropriate handler
         if state.completed:
             reply_text = self._handle_post_completion(state)
@@ -90,6 +132,60 @@ class EmailAgent:
         self._store.save(state)
 
         return reply_text
+
+    def handle_automated_message(
+        self,
+        sender_email: str,
+        subject: str,
+        reason: str,
+        inbound_message_id: str = "",
+    ) -> None:
+        """Handle an inbound message detected as automated/bounce.
+
+        Does NOT send any reply (to avoid looping).  Alerts the admin once per
+        conversation — subsequent automated messages from the same sender are
+        silently dropped after the first alert.
+        """
+        email_key = normalize_email(sender_email)
+        state = self._store.load(email_key)
+        if state is None:
+            state = ConversationState(
+                conversation_id=email_key,
+                parent_email=email_key,
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        state.last_activity = now
+        if inbound_message_id:
+            state.last_inbound_message_id = inbound_message_id
+
+        message_count = sum(1 for m in state.messages if m.role == "user")
+
+        if state.loop_escalated:
+            logger.info(
+                "Automated message from %s (already escalated) — dropping silently", sender_email
+            )
+            self._store.save(state)
+            return
+
+        state.loop_escalated = True
+        state.updated_at = now
+        self._store.save(state)
+
+        logger.warning(
+            "Automated/bounce message from %s — reason: %s — alerting admin", sender_email, reason
+        )
+        try:
+            self._notifier.notify_loop_escalation(
+                sender_email=sender_email,
+                conversation_id=email_key,
+                reason=reason,
+                message_count=message_count,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send loop escalation notification for automated sender %s", email_key
+            )
 
     # ------------------------------------------------------------------
     # Registration flow
