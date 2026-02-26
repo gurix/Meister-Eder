@@ -35,6 +35,9 @@ class ConversationState:
     # Most recent inbound Message-ID — used for reply threading headers only,
     # NOT for conversation matching (which is always by email address).
     last_inbound_message_id: str = ""
+    # Loop / automated-sender prevention.
+    # Set to True once the admin has been notified; prevents repeated alerts.
+    loop_escalated: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -54,6 +57,7 @@ class ConversationState:
             "completed": self.completed,
             "reminder_count": self.reminder_count,
             "last_inbound_message_id": self.last_inbound_message_id,
+            "loop_escalated": self.loop_escalated,
         }
 
     @classmethod
@@ -78,4 +82,5 @@ class ConversationState:
         state.completed = data.get("completed", False)
         state.reminder_count = data.get("reminder_count", 0)
         state.last_inbound_message_id = data.get("last_inbound_message_id", "")
+        state.loop_escalated = data.get("loop_escalated", False)
         return state

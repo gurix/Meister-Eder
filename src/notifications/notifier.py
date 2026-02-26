@@ -131,6 +131,46 @@ class AdminNotifier:
             reply_to=registration.parent_guardian.email or "",
         )
 
+    def notify_loop_escalation(
+        self,
+        sender_email: str,
+        conversation_id: str,
+        reason: str,
+        message_count: int,
+    ) -> None:
+        """Alert the admin that a conversation was stopped due to a loop or automated sender.
+
+        Sent to the CC list (Markus Graf / admin) only — no playgroup leader routing needed.
+        """
+        if not self._cc_emails:
+            logger.warning(
+                "No admin CC email configured — loop escalation NOT sent for %s", conversation_id
+            )
+            return
+
+        subject = f"[WARNUNG] Automatische E-Mail / Endlosschleife erkannt: {sender_email}"
+        body = (
+            f"Das Anmeldungssystem hat eine Konversation automatisch gestoppt.\n\n"
+            f"Absender:        {sender_email}\n"
+            f"Konversations-ID: {conversation_id}\n"
+            f"Nachrichten:     {message_count}\n"
+            f"Grund:           {reason}\n\n"
+            f"Es wurde keine weitere Antwort gesendet. Bitte prüfen Sie den Sachverhalt "
+            f"manuell und leiten Sie die Konversation bei Bedarf weiter.\n\n"
+            f"---\nMeister-Eder Anmeldungssystem"
+        )
+        self._send(
+            to=self._cc_emails,
+            cc=[],
+            subject=subject,
+            body=body,
+        )
+        logger.info(
+            "Loop escalation notification sent to admin for conversation %s (reason: %s)",
+            conversation_id,
+            reason,
+        )
+
     def notify_parent(
         self,
         registration: RegistrationData,
