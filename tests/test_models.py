@@ -150,3 +150,45 @@ class TestConversationStateSerialization:
         d = state_with_messages.to_dict()
         assert d["messages"][0]["role"] == "user"
         assert "Hallo" in d["messages"][0]["content"]
+
+
+# ---------------------------------------------------------------------------
+# ConversationState — loop_escalated field
+# ---------------------------------------------------------------------------
+
+
+class TestConversationStateLoopEscalated:
+    def test_default_loop_escalated_is_false(self, fresh_state):
+        assert fresh_state.loop_escalated is False
+
+    def test_to_dict_includes_loop_escalated(self, fresh_state):
+        d = fresh_state.to_dict()
+        assert "loop_escalated" in d
+        assert d["loop_escalated"] is False
+
+    def test_to_dict_reflects_true_when_set(self, fresh_state):
+        fresh_state.loop_escalated = True
+        d = fresh_state.to_dict()
+        assert d["loop_escalated"] is True
+
+    def test_from_dict_restores_loop_escalated_true(self, fresh_state):
+        fresh_state.loop_escalated = True
+        restored = ConversationState.from_dict(fresh_state.to_dict())
+        assert restored.loop_escalated is True
+
+    def test_from_dict_defaults_to_false_when_key_missing(self):
+        """Older persisted conversations without the key deserialise safely."""
+        data = {
+            "conversation_id": "old@example.com",
+            "parent_email": "old@example.com",
+            "language": "de",
+            "flow_step": "greeting",
+            "registration": {},
+            "messages": [],
+            "completed": False,
+            "reminder_count": 0,
+            "last_inbound_message_id": "",
+            # loop_escalated intentionally absent
+        }
+        state = ConversationState.from_dict(data)
+        assert state.loop_escalated is False
