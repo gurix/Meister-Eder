@@ -1,0 +1,26 @@
+services:
+
+  # Web chat interface — Chainlit served at http://localhost:8000
+  web:
+    build: .
+    command: chainlit run chat_app.py --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      # Persistent storage for conversations and completed registrations
+      - ./data:/app/data
+      # Knowledge-base markdown files — edit on the host, no rebuild needed
+      - ./openspec:/app/openspec:ro
+    restart: unless-stopped
+
+  # Email polling agent — checks the inbox every POLL_INTERVAL seconds
+  email-worker:
+    build: .
+    command: python main.py
+    env_file: .env
+    volumes:
+      # Shares the same data directory as the web service
+      - ./data:/app/data
+      - ./openspec:/app/openspec:ro
+    restart: unless-stopped
