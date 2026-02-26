@@ -1,0 +1,22 @@
+# Secrets — never bake into the image
+.env
+
+# Version control
+.git/
+.gitignore
+
+# Python build artefacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Tests — not needed at runtime
+tests/
+
+# Persistent data — mounted as a volume at runtime
+data/
+
+# Tool configs — not needed in the container
+.claude/
+.gemini/
