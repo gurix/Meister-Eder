@@ -116,9 +116,9 @@ uv run chainlit run chat_app.py --port 8080 --host 0.0.0.0
 | `ANTHROPIC_API_KEY` | (or the key for your chosen provider) |
 | `SMTP_HOST` / `SMTP_PORT` | For admin notification emails on registration completion |
 | `IMAP_USERNAME` / `IMAP_PASSWORD` | Used as SMTP credentials |
-| `ADMIN_EMAIL_INDOOR` | Andrea Sigrist — notified when indoor group is booked |
-| `ADMIN_EMAIL_OUTDOOR` | Barbara Gross — notified when outdoor group is booked |
-| `ADMIN_EMAIL_CC` | Markus Graf — always CC'd on notifications |
+| `ADMIN_EMAIL_INDOOR` | Indoor group leader — notified when indoor group is booked |
+| `ADMIN_EMAIL_OUTDOOR` | Outdoor group leader — notified when outdoor group is booked |
+| `ADMIN_EMAIL_CC` | Admin — always CC'd on notifications |
 
 IMAP variables (`IMAP_HOST`, etc.) are not required for the web chat — only for the email channel.
 
