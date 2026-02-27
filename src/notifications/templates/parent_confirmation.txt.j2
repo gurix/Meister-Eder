@@ -46,6 +46,27 @@
 {{ strings.emergency_name }}: {{ emergency_name }}
 {{ strings.emergency_phone }}: {{ emergency_phone }}
 
+===============================================
+{{ strings.contact_section | upper }}
+===============================================
+{{ strings.contact_intro }}
+{% if has_indoor %}
+{{ strings.contact_indoor_label }}
+  {{ strings.contact_name }}: {{ leader_indoor_name }}
+  {{ strings.contact_phone }}: {{ leader_indoor_phone }}
+  {{ strings.contact_email }}: {{ leader_indoor_email }}
+{% endif %}
+{% if has_outdoor %}
+{{ strings.contact_outdoor_label }}
+  {{ strings.contact_name }}: {{ leader_outdoor_name }}
+  {{ strings.contact_phone }}: {{ leader_outdoor_phone }}
+  {{ strings.contact_email }}: {{ leader_outdoor_email }}
+{% endif %}
+{{ strings.contact_admin_label }}
+  {{ strings.contact_name }}: {{ admin_name }}
+  {{ strings.contact_phone }}: {{ admin_phone }}
+  {{ strings.contact_email }}: {{ admin_email }}
+
 -----------------------------------------------
 
 {{ strings.closing }}

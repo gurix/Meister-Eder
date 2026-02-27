@@ -39,8 +39,17 @@ iban_label: "IBAN"
 payee_label: "Empfänger"
 amount_label: "Betrag"
 
+contact_section: "Deine Ansprechpersonen"
+contact_intro: "Bei Fragen kannst du dich direkt an die zuständige Spielgruppenleiterin wenden:"
+contact_indoor_label: "Innenspielgruppe"
+contact_outdoor_label: "Waldspielgruppe"
+contact_admin_label: "Administration"
+contact_name: "Name"
+contact_phone: "Telefon"
+contact_email: "E-Mail"
+
 closing: |
-  Bei Fragen stehen wir dir gerne zur Verfügung. Wir freuen uns auf dein Kind!
+  Wir freuen uns auf dein Kind!
 
   Herzliche Grüsse
   Spielgruppe Pumuckl

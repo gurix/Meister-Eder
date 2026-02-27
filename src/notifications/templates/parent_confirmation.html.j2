@@ -74,6 +74,27 @@
     <tr><td style="padding:4px 0;color:#666;">{{ strings.emergency_phone }}</td><td>{{ emergency_phone }}</td></tr>
   </table>
 
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.contact_section }}</h2>
+  <p>{{ strings.contact_intro }}</p>
+  <table style="width:100%;border-collapse:collapse;">
+    {% if has_indoor %}
+    <tr><td colspan="2" style="padding:8px 0 2px;font-weight:bold;">{{ strings.contact_indoor_label }}</td></tr>
+    <tr><td style="padding:2px 0 2px 16px;color:#666;width:55%;">{{ strings.contact_name }}</td><td>{{ leader_indoor_name }}</td></tr>
+    <tr><td style="padding:2px 0 2px 16px;color:#666;">{{ strings.contact_phone }}</td><td><a href="tel:{{ leader_indoor_phone }}" style="color:#2e7d32;">{{ leader_indoor_phone }}</a></td></tr>
+    <tr><td style="padding:2px 0 8px 16px;color:#666;">{{ strings.contact_email }}</td><td><a href="mailto:{{ leader_indoor_email }}" style="color:#2e7d32;">{{ leader_indoor_email }}</a></td></tr>
+    {% endif %}
+    {% if has_outdoor %}
+    <tr><td colspan="2" style="padding:8px 0 2px;font-weight:bold;">{{ strings.contact_outdoor_label }}</td></tr>
+    <tr><td style="padding:2px 0 2px 16px;color:#666;width:55%;">{{ strings.contact_name }}</td><td>{{ leader_outdoor_name }}</td></tr>
+    <tr><td style="padding:2px 0 2px 16px;color:#666;">{{ strings.contact_phone }}</td><td><a href="tel:{{ leader_outdoor_phone }}" style="color:#2e7d32;">{{ leader_outdoor_phone }}</a></td></tr>
+    <tr><td style="padding:2px 0 8px 16px;color:#666;">{{ strings.contact_email }}</td><td><a href="mailto:{{ leader_outdoor_email }}" style="color:#2e7d32;">{{ leader_outdoor_email }}</a></td></tr>
+    {% endif %}
+    <tr><td colspan="2" style="padding:8px 0 2px;font-weight:bold;">{{ strings.contact_admin_label }}</td></tr>
+    <tr><td style="padding:2px 0 2px 16px;color:#666;width:55%;">{{ strings.contact_name }}</td><td>{{ admin_name }}</td></tr>
+    <tr><td style="padding:2px 0 2px 16px;color:#666;">{{ strings.contact_phone }}</td><td><a href="tel:{{ admin_phone }}" style="color:#2e7d32;">{{ admin_phone }}</a></td></tr>
+    <tr><td style="padding:2px 0 8px 16px;color:#666;">{{ strings.contact_email }}</td><td><a href="mailto:{{ admin_email }}" style="color:#2e7d32;">{{ admin_email }}</a></td></tr>
+  </table>
+
   <p style="margin-top:24px;white-space:pre-line;">{{ strings.closing }}</p>
 
 </div>
