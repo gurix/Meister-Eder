@@ -345,3 +345,143 @@ class TestGenerateQrBillPng:
         """Output starts with the PNG magic bytes."""
         png = notifier._generate_qr_bill_png()
         assert png[:4] == b"\x89PNG"
+
+
+# ---------------------------------------------------------------------------
+# Reply-To header — confirmation email to parent (task 1.3)
+# ---------------------------------------------------------------------------
+
+
+class TestNotifyParentReplyTo:
+    def test_confirmation_email_has_reply_to_admin(
+        self, notifier, complete_registration, mocker
+    ):
+        """Confirmation email sets Reply-To to the first CC (admin) address."""
+        mock_smtp_cls = mocker.patch("smtplib.SMTP")
+        captured = {}
+
+        def fake_sendmail(from_, to_, msg_str):
+            captured["msg"] = msg_str
+
+        mock_smtp_cls.return_value.sendmail.side_effect = fake_sendmail
+
+        notifier.notify_parent(complete_registration, language="de")
+
+        parsed = email.message_from_string(captured["msg"])
+        assert parsed.get("Reply-To") == "markus@example.com"
+
+    def test_confirmation_email_no_reply_to_when_no_cc(
+        self, complete_registration, mocker
+    ):
+        """When no CC emails are configured, no Reply-To header is set."""
+        notifier_no_cc = AdminNotifier(
+            smtp_host="smtp.example.com",
+            smtp_port=587,
+            username="agent@example.com",
+            password="secret",
+            from_email="agent@example.com",
+            cc_emails=[],
+        )
+        mock_smtp_cls = mocker.patch("smtplib.SMTP")
+        captured = {}
+
+        def fake_sendmail(from_, to_, msg_str):
+            captured["msg"] = msg_str
+
+        mock_smtp_cls.return_value.sendmail.side_effect = fake_sendmail
+
+        notifier_no_cc.notify_parent(complete_registration, language="de")
+
+        parsed = email.message_from_string(captured["msg"])
+        assert parsed.get("Reply-To") is None
+
+
+# ---------------------------------------------------------------------------
+# Reply-To header — admin notification emails (tasks 2.3, 2.4, 2.5)
+# ---------------------------------------------------------------------------
+
+
+class TestNotifyAdminReplyTo:
+    def _capture_msg(self, mocker):
+        """Return a side-effect function and a dict that captures the raw MIME string."""
+        captured = {}
+
+        mock_smtp_cls = mocker.patch("smtplib.SMTP")
+
+        def fake_sendmail(from_, to_, msg_str):
+            captured["msg"] = msg_str
+
+        mock_smtp_cls.return_value.sendmail.side_effect = fake_sendmail
+        return captured
+
+    def test_indoor_notification_reply_to_is_parent_email(
+        self, notifier, complete_registration, mocker
+    ):
+        """Indoor-only notification sets Reply-To to the parent's email."""
+        from src.models.registration import Booking, BookingDay
+
+        complete_registration.booking = Booking(
+            playgroup_types=["indoor"],
+            selected_days=[BookingDay(day="monday", type="indoor")],
+        )
+        captured = self._capture_msg(mocker)
+
+        notifier.notify_admin(
+            complete_registration,
+            registration_id="reg-001",
+            version=1,
+            conversation_id="conv-001",
+            channel="email",
+        )
+
+        parsed = email.message_from_string(captured["msg"])
+        assert parsed.get("Reply-To") == "anna.muster@example.com"
+
+    def test_outdoor_notification_reply_to_is_parent_email(
+        self, notifier, complete_registration, mocker
+    ):
+        """Outdoor-only notification sets Reply-To to the parent's email."""
+        from src.models.registration import Booking, BookingDay
+
+        complete_registration.booking = Booking(
+            playgroup_types=["outdoor"],
+            selected_days=[BookingDay(day="monday", type="outdoor")],
+        )
+        captured = self._capture_msg(mocker)
+
+        notifier.notify_admin(
+            complete_registration,
+            registration_id="reg-002",
+            version=1,
+            conversation_id="conv-002",
+            channel="email",
+        )
+
+        parsed = email.message_from_string(captured["msg"])
+        assert parsed.get("Reply-To") == "anna.muster@example.com"
+
+    def test_both_types_notification_reply_to_is_parent_email(
+        self, notifier, complete_registration, mocker
+    ):
+        """Both-types notification sets Reply-To to the parent's email."""
+        from src.models.registration import Booking, BookingDay
+
+        complete_registration.booking = Booking(
+            playgroup_types=["indoor", "outdoor"],
+            selected_days=[
+                BookingDay(day="monday", type="indoor"),
+                BookingDay(day="monday", type="outdoor"),
+            ],
+        )
+        captured = self._capture_msg(mocker)
+
+        notifier.notify_admin(
+            complete_registration,
+            registration_id="reg-003",
+            version=1,
+            conversation_id="conv-003",
+            channel="email",
+        )
+
+        parsed = email.message_from_string(captured["msg"])
+        assert parsed.get("Reply-To") == "anna.muster@example.com"
