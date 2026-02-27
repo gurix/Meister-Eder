@@ -125,7 +125,7 @@
 > - Registration fee: CHF 80 (one-time)
 > - Monthly fee: [amount based on selection]
 >
-> The playgroup team will be in touch soon. If you have any questions, feel free to contact Andrea (indoor) at 079 674 99 92 or Barbara (outdoor) at 078 761 19 64.
+> The playgroup team will be in touch soon. If you have any questions, feel free to contact Andrea (indoor) at 079 674 99 92 or andrea.sigrist@gmx.net, or Barbara (outdoor) at 078 761 19 64 or baba.laeubli@gmail.com.
 >
 > We look forward to welcoming [child's name]!
 
@@ -136,7 +136,7 @@
 > - Einschreibegebühr: CHF 80 (einmalig)
 > - Monatsbeitrag: [amount based on selection]
 >
-> Das Spielgruppen-Team wird sich bald melden. Bei Fragen kannst du Andrea (drinnen) unter 079 674 99 92 oder Barbara (draussen) unter 078 761 19 64 erreichen.
+> Das Spielgruppen-Team wird sich bald melden. Bei Fragen kannst du Andrea (drinnen) unter 079 674 99 92 oder andrea.sigrist@gmx.net, oder Barbara (draussen) unter 078 761 19 64 oder baba.laeubli@gmail.com erreichen.
 >
 > Wir freuen uns auf [child's name]!
 
