@@ -156,6 +156,35 @@ uv run python main.py
 
 Completed registrations from both channels are stored in the same `DATA_DIR` (default: `data/`) and share the same admin notification configuration.
 
+### Docker Compose (recommended for production)
+
+A `docker-compose.yml` is provided that runs both services together with shared persistent storage:
+
+```bash
+cp .env.example .env
+# fill in .env, then:
+docker compose up -d
+```
+
+| Service | What it runs |
+|---|---|
+| `web` | Chainlit web chat at `http://localhost:8000` |
+| `email-worker` | Email polling agent (`main.py`) |
+
+Both services mount `./data` for shared registration storage and `./openspec` (read-only) for the knowledge base. Restarting a service does not lose conversation state.
+
+To view logs:
+
+```bash
+docker compose logs -f
+```
+
+To rebuild after a code change:
+
+```bash
+docker compose up -d --build
+```
+
 ## Development
 
 ### Running tests
