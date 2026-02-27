@@ -1,10 +1,11 @@
-"""Tests for email loop prevention.
+"""Tests for email loop prevention and email channel reply headers.
 
-Covers three layers:
+Covers four areas:
 - detect_automated_message() — header-based bounce/automated sender detection
 - EmailAgent.handle_automated_message() — state tracking, one-shot admin alert
 - EmailAgent.process_message() — hard message-count cap (MAX_USER_MESSAGES)
 - AdminNotifier.notify_loop_escalation() — escalation email dispatch
+- EmailChannel.send_reply() — mid-registration emails must not carry admin Reply-To
 """
 
 import email
@@ -13,7 +14,7 @@ import json
 import pytest
 from unittest.mock import MagicMock, patch
 
-from src.channels.email_channel import detect_automated_message
+from src.channels.email_channel import detect_automated_message, EmailChannel
 from src.agent.core import EmailAgent, MAX_USER_MESSAGES
 from src.models.conversation import ConversationState, ChatMessage
 from src.notifications.notifier import AdminNotifier
@@ -650,3 +651,42 @@ class TestNotifyLoopEscalation:
         )
 
         mock_smtp_cls.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# EmailChannel.send_reply — mid-registration emails must not have admin Reply-To
+# (task 1.4)
+# ---------------------------------------------------------------------------
+
+
+class TestSendReplyNoAdminReplyTo:
+    def test_send_reply_has_no_reply_to_header(self, mocker):
+        """Mid-registration conversational emails must not carry a Reply-To header."""
+        channel = EmailChannel(
+            imap_host="imap.example.com",
+            imap_port=993,
+            smtp_host="smtp.example.com",
+            smtp_port=587,
+            username="agent@example.com",
+            password="secret",
+            use_ssl=True,
+            use_tls=True,
+            registration_email="agent@example.com",
+        )
+
+        mock_smtp_cls = mocker.patch("smtplib.SMTP")
+        captured = {}
+
+        def fake_sendmail(from_, to_, msg_str):
+            captured["msg"] = msg_str
+
+        mock_smtp_cls.return_value.sendmail.side_effect = fake_sendmail
+
+        channel.send_reply(
+            to="parent@example.com",
+            subject="Re: Anmeldung",
+            body="Wie heisst dein Kind?",
+        )
+
+        parsed = email.message_from_string(captured["msg"])
+        assert parsed.get("Reply-To") is None

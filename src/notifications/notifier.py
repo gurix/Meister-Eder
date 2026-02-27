@@ -215,6 +215,8 @@ class AdminNotifier:
         msg_outer["From"] = self._from_email
         msg_outer["To"] = parent_email
         msg_outer["Subject"] = subject
+        if self._cc_emails:
+            msg_outer["Reply-To"] = self._cc_emails[0]
 
         msg_alt = MIMEMultipart("alternative")
         msg_alt.attach(MIMEText(text_body, "plain", "utf-8"))
