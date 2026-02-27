@@ -14,6 +14,18 @@ QR_STREET = "Huebwisstrase 5"
 QR_PCODE = "8117"
 QR_CITY = "Fällanden"
 
+LEADER_INDOOR_NAME = "Andrea Sigrist"
+LEADER_INDOOR_PHONE = "079 674 99 92"
+LEADER_INDOOR_EMAIL = "andrea.sigrist@gmx.net"
+
+LEADER_OUTDOOR_NAME = "Barbara Gross"
+LEADER_OUTDOOR_PHONE = "078 761 19 64"
+LEADER_OUTDOOR_EMAIL = "baba.laeubli@gmail.com"
+
+ADMIN_NAME = "Markus Graf"
+ADMIN_PHONE = "079 261 16 37"
+ADMIN_EMAIL = "spielgruppen@familien-verein.ch"
+
 # ---------------------------------------------------------------------------
 # Formatting helpers (pure functions, no side-effects)
 # ---------------------------------------------------------------------------
@@ -187,7 +199,17 @@ def build_parent_context(
         "days": format_days_i18n(registration, strings),
         "monthly_fee": calculate_monthly_fee(registration),
         "has_indoor": "indoor" in registration.booking.playgroup_types,
+        "has_outdoor": "outdoor" in registration.booking.playgroup_types,
         "has_qr": has_qr,
+        "leader_indoor_name": LEADER_INDOOR_NAME,
+        "leader_indoor_phone": LEADER_INDOOR_PHONE,
+        "leader_indoor_email": LEADER_INDOOR_EMAIL,
+        "leader_outdoor_name": LEADER_OUTDOOR_NAME,
+        "leader_outdoor_phone": LEADER_OUTDOOR_PHONE,
+        "leader_outdoor_email": LEADER_OUTDOOR_EMAIL,
+        "admin_name": ADMIN_NAME,
+        "admin_phone": ADMIN_PHONE,
+        "admin_email": ADMIN_EMAIL,
         "parent_name": pg.full_name or "",
         "parent_address": pg.street_address or "",
         "parent_postal_code": pg.postal_code or "",
