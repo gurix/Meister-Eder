@@ -57,6 +57,7 @@ def apply_updates(state: ConversationState, updates: dict) -> None:
         "child.fullName": lambda v: setattr(reg.child, "full_name", v),
         "child.dateOfBirth": lambda v: setattr(reg.child, "date_of_birth", v),
         "child.specialNeeds": lambda v: setattr(reg.child, "special_needs", v),
+        "child.trialDayCompleted": lambda v: setattr(reg.child, "trial_day_completed", v),
         "parentGuardian.fullName": lambda v: (
             setattr(reg.parent_guardian, "full_name", v),
             setattr(state, "parent_name", v),

@@ -22,6 +22,11 @@ STEP_DESCRIPTIONS = {
         "Ask for the child's date of birth. "
         "Validate age: indoor requires ≥2 years, outdoor requires ≥2.5 years."
     ),
+    "trial_day": (
+        "Ask the parent whether the child has already completed a trial day (Schnuppertag) "
+        "at Spielgruppe Pumuckl. If yes, continue. If no, kindly explain that a trial day is "
+        "required before registration and provide contact information to arrange one."
+    ),
     "playgroup_selection": (
         "Explain both playgroup options and ask which the parent wants "
         "(indoor / outdoor / both) and which days."
@@ -50,6 +55,10 @@ _PERSONALITY = """## Your Personality
 - If the parent's reply leaves some of your questions unanswered, explicitly re-ask every unanswered question before moving on — never silently skip an open question
 - Be patient and understanding; never make parents feel they made a mistake"""
 
+_TRIAL_DAY = """## Trial Day Requirement
+- A trial day (Schnuppertag) is mandatory before registration
+- Contact administration to schedule: Markus Graf — spielgruppen@familien-verein.ch — 079 261 16 37"""
+
 _CONTACTS = """## Admin Contacts
 - Administration: Markus Graf — spielgruppen@familien-verein.ch — 079 261 16 37
 - Indoor leader: Andrea Sigrist — andrea.sigrist@gmx.net — 079 674 99 92
@@ -74,6 +83,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "child.fullName": "string or null",
     "child.dateOfBirth": "YYYY-MM-DD or null",
     "child.specialNeeds": "string or null",
+    "child.trialDayCompleted": true or false or null,
     "parentGuardian.fullName": "string or null",
     "parentGuardian.streetAddress": "string or null",
     "parentGuardian.postalCode": "4-digit string or null",
@@ -85,7 +95,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "booking.playgroupTypes": ["indoor", "outdoor"] or null,
     "booking.selectedDays": [{{"day": "monday", "type": "indoor"}}] or null
   }},
-  "next_step": "greeting|child_name|child_dob|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
+  "next_step": "greeting|child_name|child_dob|trial_day|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
   "registration_complete": false,
   "language": "de"
 }}
@@ -113,6 +123,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "child.fullName": "string or null",
     "child.dateOfBirth": "YYYY-MM-DD or null",
     "child.specialNeeds": "string or null",
+    "child.trialDayCompleted": true or false or null,
     "parentGuardian.fullName": "string or null",
     "parentGuardian.streetAddress": "string or null",
     "parentGuardian.postalCode": "4-digit string or null",
@@ -163,16 +174,17 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
 
 {_PERSONALITY}
 
-## Registration Flow (8 steps)
+## Registration Flow (10 steps)
 1. greeting — greet and detect intent
 2. child_name — ask for child's full name
 3. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
-4. playgroup_selection — present options, collect type(s) and day(s)
-5. special_needs — ask about special needs / allergies / medical conditions
-6. parent_contact — name, street address, postal code, city, phone, email
-7. emergency_contact — emergency contact name and phone
-8. confirmation — show full summary; ask to confirm; submit on confirmation
-9. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
+4. trial_day — ask if child completed a Schnuppertag; if not, explain requirement and provide contact info
+5. playgroup_selection — present options, collect type(s) and day(s)
+6. special_needs — ask about special needs / allergies / medical conditions
+7. parent_contact — name, street address, postal code, city, phone, email
+8. emergency_contact — emergency contact name and phone
+9. confirmation — show full summary; ask to confirm; submit on confirmation
+10. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
 
 **Current step: {state.flow_step}**
 **What to do now: {step_hint}**
@@ -190,6 +202,8 @@ Use the information below to answer parent questions accurately:
 {kb_content}
 
 {_PLAYGROUP_DETAILS}
+
+{_TRIAL_DAY}
 
 {_CONTACTS}
 
@@ -236,6 +250,8 @@ When handling update requests:
 {kb_content}
 
 {_PLAYGROUP_DETAILS}
+
+{_TRIAL_DAY}
 
 {_CONTACTS}
 
