@@ -21,6 +21,7 @@ class ChildInfo:
     full_name: Optional[str] = None
     date_of_birth: Optional[str] = None   # YYYY-MM-DD
     special_needs: Optional[str] = None   # text or "None"
+    schnuppertag_completed: Optional[bool] = None  # must be True to complete registration
 
 
 @dataclass
@@ -49,7 +50,8 @@ class RegistrationData:
     def is_complete(self) -> bool:
         """Return True when all required schema fields are present."""
         return (
-            bool(self.child.full_name)
+            self.child.schnuppertag_completed is True
+            and bool(self.child.full_name)
             and bool(self.child.date_of_birth)
             and self.child.special_needs is not None
             and bool(self.parent_guardian.full_name)
@@ -70,6 +72,7 @@ class RegistrationData:
                 "fullName": self.child.full_name,
                 "dateOfBirth": self.child.date_of_birth,
                 "specialNeeds": self.child.special_needs,
+                "schnuppertagCompleted": self.child.schnuppertag_completed,
             },
             "parentGuardian": {
                 "fullName": self.parent_guardian.full_name,
@@ -100,6 +103,7 @@ class RegistrationData:
                 full_name=child.get("fullName"),
                 date_of_birth=child.get("dateOfBirth"),
                 special_needs=child.get("specialNeeds"),
+                schnuppertag_completed=child.get("schnuppertagCompleted"),
             )
         if parent := data.get("parentGuardian", {}):
             reg.parent_guardian = ParentGuardian(

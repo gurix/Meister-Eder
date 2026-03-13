@@ -14,8 +14,16 @@ STEP_DESCRIPTIONS = {
         "Greet the parent warmly and detect their intent (registration vs. questions). "
         "In this first message, explicitly tell them they can write in any human language "
         "and you will reply in the same language. "
-        "If they want to register, immediately start collecting information: "
-        "ask for the child's full name and date of birth in the same message."
+        "If they want to register, move to the schnuppertag_check step immediately."
+    ),
+    "schnuppertag_check": (
+        "Before collecting any registration data, ask the parent whether their child has already "
+        "completed a Schnuppertag (trial day) at the playgroup. "
+        "If the parent confirms YES: set child.schnuppertagCompleted to true and proceed to child_name. "
+        "If the parent says NO or is unsure: explain warmly that a Schnuppertag is required before "
+        "a child can be definitively registered. Provide the contact details of the relevant leaders "
+        "so the parent can arrange a Schnuppertag. Tell them to come back and register once the "
+        "Schnuppertag has been completed. Stay at schnuppertag_check — do NOT advance to child_name."
     ),
     "child_name": "Ask for the child's full name.",
     "child_dob": (
@@ -71,6 +79,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
 {{
   "reply": "Your conversational message to the parent (plain text, NOT JSON)",
   "updates": {{
+    "child.schnuppertagCompleted": true or null,
     "child.fullName": "string or null",
     "child.dateOfBirth": "YYYY-MM-DD or null",
     "child.specialNeeds": "string or null",
@@ -85,7 +94,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "booking.playgroupTypes": ["indoor", "outdoor"] or null,
     "booking.selectedDays": [{{"day": "monday", "type": "indoor"}}] or null
   }},
-  "next_step": "greeting|child_name|child_dob|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
+  "next_step": "greeting|schnuppertag_check|child_name|child_dob|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
   "registration_complete": false,
   "language": "de"
 }}
@@ -163,16 +172,17 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
 
 {_PERSONALITY}
 
-## Registration Flow (8 steps)
+## Registration Flow (9 steps)
 1. greeting — greet and detect intent
-2. child_name — ask for child's full name
-3. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
-4. playgroup_selection — present options, collect type(s) and day(s)
-5. special_needs — ask about special needs / allergies / medical conditions
-6. parent_contact — name, street address, postal code, city, phone, email
-7. emergency_contact — emergency contact name and phone
-8. confirmation — show full summary; ask to confirm; submit on confirmation
-9. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
+2. schnuppertag_check — confirm the child has completed a Schnuppertag; if not, provide leader contacts and stop
+3. child_name — ask for child's full name
+4. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
+5. playgroup_selection — present options, collect type(s) and day(s)
+6. special_needs — ask about special needs / allergies / medical conditions
+7. parent_contact — name, street address, postal code, city, phone, email
+8. emergency_contact — emergency contact name and phone
+9. confirmation — show full summary; ask to confirm; submit on confirmation
+10. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
 
 **Current step: {state.flow_step}**
 **What to do now: {step_hint}**
