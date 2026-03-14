@@ -79,6 +79,20 @@ _WELCOME_DE = (
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 # Human-readable step labels for the resume summary
+_STEP_LABELS_DE = {
+    "email_first": "Beginn",
+    "greeting": "Begrüssung",
+    "child_name": "Name des Kindes",
+    "child_dob": "Geburtsdatum des Kindes",
+    "playgroup_selection": "Spielgruppenauswahl",
+    "trial_day": "Schnuppertag",
+    "special_needs": "Besondere Bedürfnisse",
+    "parent_contact": "Elternkontakt",
+    "emergency_contact": "Notfallkontakt",
+    "confirmation": "Bestätigung",
+    "complete": "Abgeschlossen",
+}
+
 def _build_resume_summary(existing: ConversationState) -> str:
     """Build a human-readable resume message in the parent's language.
 
@@ -86,8 +100,7 @@ def _build_resume_summary(existing: ConversationState) -> str:
     language is supported automatically without hardcoded translations.
     """
     s = get_strings(existing.language, _config.simple_model)
-    step_labels = s.get("chat_resume_steps", {})
-    step_label = step_labels.get(existing.flow_step, existing.flow_step)
+    step_label = _STEP_LABELS_DE.get(existing.flow_step, existing.flow_step)
     channel_label = s.get(f"chat_resume_channel_{existing.channel}", existing.channel)
     child_name = existing.registration.child.full_name
 
@@ -114,8 +127,8 @@ def _build_completed_summary(existing: ConversationState) -> str:
     if child_name:
         lines.append(s.get("chat_resume_child_label", "Kind: {name}.").format(name=child_name))
     if playgroup_types:
-        type_map = s.get("types", {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"})
-        types_str = " und ".join(type_map.get(t, t) for t in playgroup_types)
+        type_labels = {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"}
+        types_str = " und ".join(type_labels.get(t, t) for t in playgroup_types)
         lines.append(f"Spielgruppe: {types_str}.")
     lines.append(s.get("chat_resume_submitted_via", "Diese Anmeldung wurde über den {channel} eingereicht. Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!").format(channel=channel_label))
     return "\n\n".join(lines)
