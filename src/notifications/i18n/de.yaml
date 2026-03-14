@@ -68,3 +68,14 @@ days:
 types:
   indoor: "Innenspielgruppe"
   outdoor: "Waldspielgruppe"
+
+# Chat resume messages
+chat_resume_found: "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden!"
+chat_resume_last_step: "Du hast zuletzt über den {channel} mit uns gesprochen und warst beim Schritt: {step}."
+chat_resume_child: "Die Anmeldung ist für: {name}."
+chat_resume_continue: "Wir können dort weitermachen, wo du aufgehört hast. Lass uns fortfahren."
+chat_resume_completed: "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert."
+chat_resume_child_label: "Kind: {name}."
+chat_resume_submitted_via: "Diese Anmeldung wurde über den {channel} eingereicht. Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!"
+chat_resume_channel_chat: "Web-Chat"
+chat_resume_channel_email: "E-Mail"
