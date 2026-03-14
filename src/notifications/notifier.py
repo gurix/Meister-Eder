@@ -175,6 +175,7 @@ class AdminNotifier:
         self,
         registration: RegistrationData,
         language: str = "de",
+        resume_token: str = "",
     ) -> None:
         """Send an HTML confirmation email to the parent with registration summary and QR-bill."""
         parent_email = registration.parent_guardian.email
@@ -190,7 +191,7 @@ class AdminNotifier:
             logger.exception("Failed to generate QR-bill PNG — omitting image from confirmation")
             qr_png = None
 
-        ctx = build_parent_context(registration, strings, has_qr=qr_png is not None)
+        ctx = build_parent_context(registration, strings, has_qr=qr_png is not None, resume_token=resume_token)
         html_body = render_template("parent_confirmation.html.j2", ctx)
         text_body = render_template("parent_confirmation.txt.j2", ctx)
         subject = strings["subject"]

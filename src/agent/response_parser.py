@@ -66,7 +66,10 @@ def apply_updates(state: ConversationState, updates: dict) -> None:
         "parentGuardian.postalCode": lambda v: setattr(reg.parent_guardian, "postal_code", str(v)),
         "parentGuardian.city": lambda v: setattr(reg.parent_guardian, "city", v),
         "parentGuardian.phone": lambda v: setattr(reg.parent_guardian, "phone", v),
-        "parentGuardian.email": lambda v: setattr(reg.parent_guardian, "email", v),
+        "parentGuardian.email": lambda v: (
+            setattr(reg.parent_guardian, "email", v),
+            setattr(state, "parent_email", v) if not state.parent_email else None,
+        ),
         "emergencyContact.fullName": lambda v: setattr(reg.emergency_contact, "full_name", v),
         "emergencyContact.phone": lambda v: setattr(reg.emergency_contact, "phone", v),
     }

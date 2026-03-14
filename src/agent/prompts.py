@@ -10,8 +10,14 @@ from ..models.conversation import ConversationState
 # Step descriptions help the model understand where it is in the registration flow.
 # ---------------------------------------------------------------------------
 STEP_DESCRIPTIONS = {
+    "email_first": (
+        "The parent has just been greeted and asked for their email. "
+        "Wait for them to provide their email address. Once extracted, the system will "
+        "handle lookup and resume logic automatically. Just acknowledge warmly."
+    ),
     "greeting": (
-        "Greet the parent warmly and detect their intent (registration vs. questions). "
+        "The parent has provided their email. Now greet them warmly and detect their intent "
+        "(registration vs. questions). "
         "In this first message, explicitly tell them they can write in any human language "
         "and you will reply in the same language. "
         "If they want to register, immediately start collecting information: "
@@ -103,7 +109,8 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "booking.playgroupTypes": ["indoor", "outdoor"] or null,
     "booking.selectedDays": [{{"day": "monday", "type": "indoor"}}] or null
   }},
-  "next_step": "greeting|child_name|child_dob|trial_day|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
+  "next_step": "email_first|greeting|child_name|child_dob|trial_day|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
+  "intent": "new",
   "registration_complete": false,
   "language": "de"
 }}
@@ -117,7 +124,13 @@ Rules:
 - `language` must be "de" or "en" based on the parent's message.
 - Always store free-text field values (especially `child.specialNeeds`) **in German** in `updates`, translating from the parent's language if necessary. Use "Keine" if the parent indicates no special needs.
 - The `reply` field must be natural, friendly, conversational text — not JSON and not a list of fields.
-- The `reply` field must be plain text only. No markdown: no **bold**, no _italic_, no # headers, no bullet points with - or *, no backticks. Use plain sentences and line breaks only."""
+- The `reply` field must be plain text only. No markdown: no **bold**, no _italic_, no # headers, no bullet points with - or *, no backticks. Use plain sentences and line breaks only.
+
+`intent` values:
+- `"new"` — normal new registration flow (default)
+- `"resume"` — parent wants to resume an existing registration
+- `"status_query"` — parent asks about their registration status
+- `"resend_confirmation"` — parent wants the confirmation email resent"""
 
 _POST_COMPLETION_RESPONSE_FORMAT = """## CRITICAL: Response Format
 
@@ -151,6 +164,8 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
 - `"question"` — parent is asking about fees, schedule, policies, etc. → answer from knowledge base; set `updates` to all nulls.
 - `"update"` — parent explicitly wants to change their registration data → collect the new values in `updates`, confirm the change in `reply`.
 - `"new_child"` — parent wants to register an additional child → treat as a new registration; begin from step child_name.
+- `"status_query"` — parent asks about the status of their registration → summarise the current registration data in `reply`.
+- `"resend_confirmation"` — parent wants the confirmation email resent → confirm in `reply` that it will be resent.
 
 Rules:
 - Only set fields in `updates` when intent is `"update"` AND the parent has provided the new value in this message.
@@ -182,17 +197,18 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
 
 {_PERSONALITY}
 
-## Registration Flow (10 steps)
-1. greeting — greet and detect intent
-2. child_name — ask for child's full name
-3. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
-4. playgroup_selection — present options, collect type(s) and day(s)
-5. trial_day — ask if child completed a Schnuppertag; if not, provide the correct group leader contact based on selected playgroup
-6. special_needs — ask about special needs / allergies / medical conditions
-7. parent_contact — name, street address, postal code, city, phone, email
-8. emergency_contact — emergency contact name and phone
-9. confirmation — show full summary; ask to confirm; submit on confirmation
-10. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
+## Registration Flow (11 steps)
+1. email_first — ask for email address (so the parent can resume later if the conversation is interrupted)
+2. greeting — greet and detect intent
+3. child_name — ask for child's full name
+4. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
+5. playgroup_selection — present options, collect type(s) and day(s)
+6. trial_day — ask if child completed a Schnuppertag; if not, provide the correct group leader contact based on selected playgroup
+7. special_needs — ask about special needs / allergies / medical conditions
+8. parent_contact — name, street address, postal code, city, phone, email
+9. emergency_contact — emergency contact name and phone
+10. confirmation — show full summary; ask to confirm; submit on confirmation
+11. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
 
 **Current step: {state.flow_step}**
 **What to do now: {step_hint}**

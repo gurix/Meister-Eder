@@ -38,6 +38,8 @@ class ConversationState:
     # Loop / automated-sender prevention.
     # Set to True once the admin has been notified; prevents repeated alerts.
     loop_escalated: bool = False
+    # Short code for resuming a conversation (included in parent confirmation email).
+    resume_token: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -58,6 +60,7 @@ class ConversationState:
             "reminder_count": self.reminder_count,
             "last_inbound_message_id": self.last_inbound_message_id,
             "loop_escalated": self.loop_escalated,
+            "resume_token": self.resume_token,
         }
 
     @classmethod
@@ -83,4 +86,5 @@ class ConversationState:
         state.reminder_count = data.get("reminder_count", 0)
         state.last_inbound_message_id = data.get("last_inbound_message_id", "")
         state.loop_escalated = data.get("loop_escalated", False)
+        state.resume_token = data.get("resume_token", "")
         return state

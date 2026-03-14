@@ -19,6 +19,9 @@ Environment variables (see .env.example):
 """
 
 import logging
+import re
+import secrets
+import string
 import uuid
 from datetime import datetime, timezone
 
@@ -68,8 +71,11 @@ _WELCOME_DE = (
     "Hallo! Ich bin der Anmeldeassistent der Spielgruppe Pumuckl. "
     "Ich kann dir helfen, dein Kind anzumelden, oder deine Fragen zur Spielgruppe beantworten.\n\n"
     "Du kannst mir auf die Sprache schreiben die du am besten kannst — ich antworte in derselben Sprache.\n\n"
-    "Womit kann ich dir helfen?"
+    "Damit du deine Anmeldung später fortsetzen kannst, falls das Gespräch unterbrochen wird: "
+    "Wie lautet deine E-Mail-Adresse?"
 )
+
+_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +107,10 @@ async def on_chat_start() -> None:
     # Brand new session
     session_id = str(uuid.uuid4())
     state = ConversationState(conversation_id=session_id)
+    state.flow_step = "email_first"
+    state.resume_token = "".join(
+        secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6)
+    )
     # Store the welcome in history so it's replayed if the session reconnects.
     state.messages.append(ChatMessage(role="assistant", content=_WELCOME_DE))
     cl.user_session.set("state", state.to_dict())
@@ -120,6 +130,57 @@ async def on_message(message: cl.Message) -> None:
     # WebSocket reconnect during the LLM call can replay the full conversation.
     state.messages.append(ChatMessage(role="user", content=message.content))
     cl.user_session.set("state", state.to_dict())
+
+    # --- Handle email_first step: extract email and check for existing conversation ---
+    if state.flow_step == "email_first" and state.parent_email == "":
+        email_match = _EMAIL_RE.search(message.content)
+        if email_match:
+            email = email_match.group().lower()
+            state.parent_email = email
+            existing_state = _store.find_by_email(email)
+            if existing_state and not existing_state.completed:
+                # Resume existing incomplete registration
+                current_session_id = state.conversation_id
+                current_messages = state.messages
+                current_token = state.resume_token
+                # Restore registration data from stored state
+                state.registration = existing_state.registration
+                state.flow_step = existing_state.flow_step
+                state.language = existing_state.language
+                state.parent_name = existing_state.parent_name
+                state.conversation_id = current_session_id
+                state.messages = current_messages
+                state.resume_token = current_token or existing_state.resume_token
+                reply = (
+                    "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden! "
+                    "Wir können dort weitermachen, wo du aufgehört hast.\n\n"
+                    "Lass uns fortfahren."
+                )
+                state.messages.append(ChatMessage(role="assistant", content=reply))
+                _store.save(state)
+                cl.user_session.set("state", state.to_dict())
+                await cl.Message(content=reply).send()
+                return
+            elif existing_state and existing_state.completed:
+                # Registration already completed
+                reply = (
+                    "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert. "
+                    "Falls du den Status sehen möchtest oder ein weiteres Kind anmelden willst, "
+                    "sag mir einfach Bescheid!"
+                )
+                state.completed = existing_state.completed
+                state.registration = existing_state.registration
+                state.flow_step = "complete"
+                state.messages.append(ChatMessage(role="assistant", content=reply))
+                _store.save(state)
+                cl.user_session.set("state", state.to_dict())
+                await cl.Message(content=reply).send()
+                return
+            else:
+                # New registration — continue normally
+                state.flow_step = "greeting"
+                _store.save(state)
+                cl.user_session.set("state", state.to_dict())
 
     # --- Build system prompt ---
     system = build_system_prompt(_kb, state)
@@ -177,6 +238,7 @@ async def on_message(message: cl.Message) -> None:
             _notifier.notify_parent(
                 registration=state.registration,
                 language=state.language,
+                resume_token=state.resume_token,
             )
         except Exception:
             logger.exception(
@@ -187,6 +249,24 @@ async def on_message(message: cl.Message) -> None:
     if state.completed and intent == "update" and any(v is not None for v in updates.values()):
         _handle_registration_update(state)
 
+    # --- Handle status_query intent ---
+    if intent == "status_query" and state.completed:
+        logger.info("Status query for session %s", state.conversation_id)
+
+    # --- Handle resend_confirmation intent ---
+    if intent == "resend_confirmation" and state.completed:
+        try:
+            _notifier.notify_parent(
+                registration=state.registration,
+                language=state.language,
+                resume_token=state.resume_token,
+            )
+            logger.info("Resent parent confirmation for session %s", state.conversation_id)
+        except Exception:
+            logger.exception(
+                "Failed to resend parent confirmation for session %s", state.conversation_id
+            )
+
     # --- Handle new-child reset ---
     if state.completed and intent == "new_child":
         state.registration = RegistrationData()
@@ -196,6 +276,8 @@ async def on_message(message: cl.Message) -> None:
 
     # --- Persist updated state ---
     cl.user_session.set("state", state.to_dict())
+    if state.parent_email:
+        _store.save(state)
 
 
 @cl.on_chat_end

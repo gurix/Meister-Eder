@@ -67,6 +67,15 @@
   {{ strings.contact_phone }}: {{ admin_phone }}
   {{ strings.contact_email }}: {{ admin_email }}
 
+{% if resume_token %}
+===============================================
+{{ strings.resume_section | default("WIEDERAUFNAHME-CODE", true) | upper }}
+===============================================
+{{ strings.resume_intro | default("Falls dein Gespräch unterbrochen wurde, kannst du mit diesem Code deine Anmeldung fortsetzen:", true) }}
+
+  {{ strings.resume_code_label | default("Code", true) }}: {{ resume_token }}
+
+{% endif %}
 -----------------------------------------------
 
 {{ strings.closing }}

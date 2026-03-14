@@ -54,6 +54,10 @@ closing: |
   Herzliche Grüsse
   Spielgruppe Pumuckl
 
+resume_section: "Wiederaufnahme-Code"
+resume_intro: "Falls dein Gespräch unterbrochen wurde, kannst du mit diesem Code deine Anmeldung fortsetzen:"
+resume_code_label: "Code"
+
 none: "Keine"
 
 days:
