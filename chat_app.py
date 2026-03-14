@@ -97,46 +97,81 @@ _CHANNEL_LABELS_DE = {
     "email": "E-Mail",
 }
 
+_RESUME_STRINGS: dict[str, dict[str, str]] = {
+    "de": {
+        "found": "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden!",
+        "last_step": "Du hast zuletzt über den {channel} mit uns gesprochen und warst beim Schritt: {step}.",
+        "child": "Die Anmeldung ist für: {name}.",
+        "continue": "Wir können dort weitermachen, wo du aufgehört hast. Lass uns fortfahren.",
+        "completed": "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert.",
+        "child_label": "Kind: {name}.",
+        "submitted_via": "Diese Anmeldung wurde über den {channel} eingereicht. Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!",
+        "channel_chat": "Web-Chat",
+        "channel_email": "E-Mail",
+    },
+    "en": {
+        "found": "I found an incomplete registration under this email address!",
+        "last_step": "You last spoke with us via {channel} and were at step: {step}.",
+        "child": "The registration is for: {name}.",
+        "continue": "We can continue where you left off. Let's go!",
+        "completed": "There is already a completed registration saved under this email address.",
+        "child_label": "Child: {name}.",
+        "submitted_via": "This registration was submitted via {channel}. If you'd like to make changes or register another child, just let me know!",
+        "channel_chat": "web chat",
+        "channel_email": "email",
+    },
+    "fr": {
+        "found": "J'ai trouvé une inscription incomplète sous cette adresse e-mail !",
+        "last_step": "Vous avez parlé avec nous via {channel} et étiez à l'étape : {step}.",
+        "child": "L'inscription est pour : {name}.",
+        "continue": "Nous pouvons reprendre là où vous vous êtes arrêté·e. Continuons !",
+        "completed": "Une inscription complète est déjà enregistrée sous cette adresse e-mail.",
+        "child_label": "Enfant : {name}.",
+        "submitted_via": "Cette inscription a été soumise via {channel}. Si vous souhaitez apporter des modifications ou inscrire un autre enfant, dites-le moi !",
+        "channel_chat": "chat web",
+        "channel_email": "e-mail",
+    },
+}
+
+
+def _get_resume_strings(language: str) -> dict[str, str]:
+    return _RESUME_STRINGS.get(language, _RESUME_STRINGS["de"])
+
 
 def _build_resume_summary(existing: ConversationState) -> str:
-    """Build a human-readable resume message for a found incomplete session.
-
-    Shows the step reached and which channel the previous session used,
-    so the parent understands they can continue cross-channel.
-    """
+    """Build a human-readable resume message in the parent's language."""
+    s = _get_resume_strings(existing.language)
     step_label = _STEP_LABELS_DE.get(existing.flow_step, existing.flow_step)
-    channel_label = _CHANNEL_LABELS_DE.get(existing.channel, existing.channel)
+    channel_label = s.get(f"channel_{existing.channel}", existing.channel)
     child_name = existing.registration.child.full_name
 
     lines = [
-        "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden!",
-        f"Du hast zuletzt über den {channel_label} mit uns gesprochen und warst beim Schritt: {step_label}.",
+        s["found"],
+        s["last_step"].format(channel=channel_label, step=step_label),
     ]
     if child_name:
-        lines.append(f"Die Anmeldung ist für: {child_name}.")
-    lines.append("Wir können dort weitermachen, wo du aufgehört hast. Lass uns fortfahren.")
+        lines.append(s["child"].format(name=child_name))
+    lines.append(s["continue"])
     return "\n\n".join(lines)
 
 
 def _build_completed_summary(existing: ConversationState) -> str:
     """Build a human-readable message for a found completed registration."""
-    channel_label = _CHANNEL_LABELS_DE.get(existing.channel, existing.channel)
+    s = _get_resume_strings(existing.language)
+    channel_label = s.get(f"channel_{existing.channel}", existing.channel)
     child_name = existing.registration.child.full_name
     playgroup_types = existing.registration.booking.playgroup_types
 
     lines = [
-        "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert.",
+        s["completed"],
     ]
     if child_name:
-        lines.append(f"Kind: {child_name}.")
+        lines.append(s["child_label"].format(name=child_name))
     if playgroup_types:
         type_labels = {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"}
         types_str = " und ".join(type_labels.get(t, t) for t in playgroup_types)
         lines.append(f"Spielgruppe: {types_str}.")
-    lines.append(
-        f"Diese Anmeldung wurde über den {channel_label} eingereicht. "
-        "Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!"
-    )
+    lines.append(s["submitted_via"].format(channel=channel_label))
     return "\n\n".join(lines)
 
 
