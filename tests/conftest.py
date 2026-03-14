@@ -21,6 +21,7 @@ def complete_registration() -> RegistrationData:
             full_name="Lena Muster",
             date_of_birth="2022-03-15",
             special_needs="None",
+            trial_day_completed=True,
         ),
         parent_guardian=ParentGuardian(
             full_name="Anna Muster",

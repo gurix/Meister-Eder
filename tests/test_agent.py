@@ -267,5 +267,18 @@ class TestApplyUpdates:
         agent._apply_updates(fresh_state, {"child.fullName": None})
         assert fresh_state.registration.child.full_name == "Lena"
 
+    def test_sets_trial_day_completed_true(self, agent, fresh_state):
+        agent._apply_updates(fresh_state, {"child.trialDayCompleted": True})
+        assert fresh_state.registration.child.trial_day_completed is True
+
+    def test_sets_trial_day_completed_false(self, agent, fresh_state):
+        agent._apply_updates(fresh_state, {"child.trialDayCompleted": False})
+        assert fresh_state.registration.child.trial_day_completed is False
+
+    def test_trial_day_completed_none_ignored(self, agent, fresh_state):
+        fresh_state.registration.child.trial_day_completed = True
+        agent._apply_updates(fresh_state, {"child.trialDayCompleted": None})
+        assert fresh_state.registration.child.trial_day_completed is True
+
     def test_ignores_unknown_keys(self, agent, fresh_state):
         agent._apply_updates(fresh_state, {"unknown.key": "value"})  # should not raise

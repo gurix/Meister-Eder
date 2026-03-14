@@ -26,6 +26,16 @@ STEP_DESCRIPTIONS = {
         "Explain both playgroup options and ask which the parent wants "
         "(indoor / outdoor / both) and which days."
     ),
+    "trial_day": (
+        "Ask the parent whether the child has already completed a trial day (Schnuppertag) "
+        "at Spielgruppe Pumuckl. If yes, continue. If no, kindly explain that a trial day is "
+        "required before registration and provide contact information to arrange one. "
+        "Use the playgroup already selected (see Current Registration Data) to determine "
+        "which group leader to contact: "
+        "indoor → Andrea Sigrist (andrea.sigrist@gmx.net / 079 674 99 92); "
+        "outdoor → Barbara Gross (baba.laeubli@gmail.com / 078 761 19 64); "
+        "both → provide both contacts."
+    ),
     "special_needs": (
         "Ask whether the child has any special needs, allergies, or medical conditions."
     ),
@@ -49,6 +59,13 @@ _PERSONALITY = """## Your Personality
 - Collect all information for the current step — and any clearly related follow-up steps — in a single message; weave the questions naturally into flowing sentences, never as a form or bullet list
 - If the parent's reply leaves some of your questions unanswered, explicitly re-ask every unanswered question before moving on — never silently skip an open question
 - Be patient and understanding; never make parents feel they made a mistake"""
+
+_TRIAL_DAY = """## Trial Day Requirement
+- A trial day (Schnuppertag) is mandatory before registration
+- To schedule a trial day, parents contact the group leader of their chosen playgroup directly:
+  - Indoor → Andrea Sigrist — andrea.sigrist@gmx.net — 079 674 99 92
+  - Outdoor → Barbara Gross — baba.laeubli@gmail.com — 078 761 19 64
+  - Both groups → provide both contacts"""
 
 _CONTACTS = """## Admin Contacts
 - Administration: Markus Graf — spielgruppen@familien-verein.ch — 079 261 16 37
@@ -74,6 +91,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "child.fullName": "string or null",
     "child.dateOfBirth": "YYYY-MM-DD or null",
     "child.specialNeeds": "string or null",
+    "child.trialDayCompleted": true or false or null,
     "parentGuardian.fullName": "string or null",
     "parentGuardian.streetAddress": "string or null",
     "parentGuardian.postalCode": "4-digit string or null",
@@ -85,7 +103,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "booking.playgroupTypes": ["indoor", "outdoor"] or null,
     "booking.selectedDays": [{{"day": "monday", "type": "indoor"}}] or null
   }},
-  "next_step": "greeting|child_name|child_dob|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
+  "next_step": "greeting|child_name|child_dob|trial_day|playgroup_selection|special_needs|parent_contact|emergency_contact|confirmation|complete",
   "registration_complete": false,
   "language": "de"
 }}
@@ -113,6 +131,7 @@ You MUST respond with **only** a valid JSON object — no markdown, no extra tex
     "child.fullName": "string or null",
     "child.dateOfBirth": "YYYY-MM-DD or null",
     "child.specialNeeds": "string or null",
+    "child.trialDayCompleted": true or false or null,
     "parentGuardian.fullName": "string or null",
     "parentGuardian.streetAddress": "string or null",
     "parentGuardian.postalCode": "4-digit string or null",
@@ -163,16 +182,17 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
 
 {_PERSONALITY}
 
-## Registration Flow (8 steps)
+## Registration Flow (10 steps)
 1. greeting — greet and detect intent
 2. child_name — ask for child's full name
 3. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
 4. playgroup_selection — present options, collect type(s) and day(s)
-5. special_needs — ask about special needs / allergies / medical conditions
-6. parent_contact — name, street address, postal code, city, phone, email
-7. emergency_contact — emergency contact name and phone
-8. confirmation — show full summary; ask to confirm; submit on confirmation
-9. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
+5. trial_day — ask if child completed a Schnuppertag; if not, provide the correct group leader contact based on selected playgroup
+6. special_needs — ask about special needs / allergies / medical conditions
+7. parent_contact — name, street address, postal code, city, phone, email
+8. emergency_contact — emergency contact name and phone
+9. confirmation — show full summary; ask to confirm; submit on confirmation
+10. complete — thank parent, mention CHF 80 registration fee, monthly fees, and contacts
 
 **Current step: {state.flow_step}**
 **What to do now: {step_hint}**
@@ -190,6 +210,8 @@ Use the information below to answer parent questions accurately:
 {kb_content}
 
 {_PLAYGROUP_DETAILS}
+
+{_TRIAL_DAY}
 
 {_CONTACTS}
 
@@ -236,6 +258,8 @@ When handling update requests:
 {kb_content}
 
 {_PLAYGROUP_DETAILS}
+
+{_TRIAL_DAY}
 
 {_CONTACTS}
 

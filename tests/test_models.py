@@ -57,6 +57,18 @@ class TestRegistrationDataIsComplete:
         complete_registration.booking.playgroup_types = []
         assert complete_registration.is_complete() is False
 
+    def test_trial_day_completed_none_fails(self, complete_registration):
+        complete_registration.child.trial_day_completed = None
+        assert complete_registration.is_complete() is False
+
+    def test_trial_day_completed_false_fails(self, complete_registration):
+        complete_registration.child.trial_day_completed = False
+        assert complete_registration.is_complete() is False
+
+    def test_trial_day_completed_true_passes(self, complete_registration):
+        complete_registration.child.trial_day_completed = True
+        assert complete_registration.is_complete() is True
+
 
 # ---------------------------------------------------------------------------
 # RegistrationData serialisation round-trip
@@ -76,6 +88,7 @@ class TestRegistrationDataSerialization:
         assert d["child"]["fullName"] == "Lena Muster"
         assert d["child"]["dateOfBirth"] == "2022-03-15"
         assert d["child"]["specialNeeds"] == "None"
+        assert d["child"]["trialDayCompleted"] is True
 
     def test_to_dict_parent_fields(self, complete_registration):
         d = complete_registration.to_dict()
@@ -91,9 +104,41 @@ class TestRegistrationDataSerialization:
         d = complete_registration.to_dict()
         restored = RegistrationData.from_dict(d)
         assert restored.child.full_name == complete_registration.child.full_name
+        assert restored.child.trial_day_completed == complete_registration.child.trial_day_completed
         assert restored.parent_guardian.email == complete_registration.parent_guardian.email
         assert restored.emergency_contact.phone == complete_registration.emergency_contact.phone
         assert len(restored.booking.selected_days) == len(complete_registration.booking.selected_days)
+
+    def test_from_dict_trial_day_completed_true(self):
+        data = {
+            "child": {"fullName": "Lena", "dateOfBirth": "2022-01-01", "specialNeeds": "None", "trialDayCompleted": True},
+            "parentGuardian": {},
+            "emergencyContact": {},
+            "booking": {},
+        }
+        reg = RegistrationData.from_dict(data)
+        assert reg.child.trial_day_completed is True
+
+    def test_from_dict_trial_day_completed_false(self):
+        data = {
+            "child": {"fullName": "Lena", "dateOfBirth": "2022-01-01", "specialNeeds": "None", "trialDayCompleted": False},
+            "parentGuardian": {},
+            "emergencyContact": {},
+            "booking": {},
+        }
+        reg = RegistrationData.from_dict(data)
+        assert reg.child.trial_day_completed is False
+
+    def test_from_dict_backward_compat_missing_trial_day(self):
+        """Older data without trialDayCompleted key should default to None."""
+        data = {
+            "child": {"fullName": "Lena", "dateOfBirth": "2022-01-01", "specialNeeds": "None"},
+            "parentGuardian": {},
+            "emergencyContact": {},
+            "booking": {},
+        }
+        reg = RegistrationData.from_dict(data)
+        assert reg.child.trial_day_completed is None
 
     def test_from_dict_outdoor_booking(self):
         data = {
