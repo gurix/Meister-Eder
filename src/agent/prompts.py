@@ -22,14 +22,19 @@ STEP_DESCRIPTIONS = {
         "Ask for the child's date of birth. "
         "Validate age: indoor requires ≥2 years, outdoor requires ≥2.5 years."
     ),
-    "trial_day": (
-        "Ask the parent whether the child has already completed a trial day (Schnuppertag) "
-        "at Spielgruppe Pumuckl. If yes, continue. If no, kindly explain that a trial day is "
-        "required before registration and provide contact information to arrange one."
-    ),
     "playgroup_selection": (
         "Explain both playgroup options and ask which the parent wants "
         "(indoor / outdoor / both) and which days."
+    ),
+    "trial_day": (
+        "Ask the parent whether the child has already completed a trial day (Schnuppertag) "
+        "at Spielgruppe Pumuckl. If yes, continue. If no, kindly explain that a trial day is "
+        "required before registration and provide contact information to arrange one. "
+        "Use the playgroup already selected (see Current Registration Data) to determine "
+        "which group leader to contact: "
+        "indoor → Andrea Sigrist (andrea.sigrist@gmx.net / 079 674 99 92); "
+        "outdoor → Barbara Gross (baba.laeubli@gmail.com / 078 761 19 64); "
+        "both → provide both contacts."
     ),
     "special_needs": (
         "Ask whether the child has any special needs, allergies, or medical conditions."
@@ -57,7 +62,10 @@ _PERSONALITY = """## Your Personality
 
 _TRIAL_DAY = """## Trial Day Requirement
 - A trial day (Schnuppertag) is mandatory before registration
-- Contact administration to schedule: Markus Graf — spielgruppen@familien-verein.ch — 079 261 16 37"""
+- To schedule a trial day, parents contact the group leader of their chosen playgroup directly:
+  - Indoor → Andrea Sigrist — andrea.sigrist@gmx.net — 079 674 99 92
+  - Outdoor → Barbara Gross — baba.laeubli@gmail.com — 078 761 19 64
+  - Both groups → provide both contacts"""
 
 _CONTACTS = """## Admin Contacts
 - Administration: Markus Graf — spielgruppen@familien-verein.ch — 079 261 16 37
@@ -178,8 +186,8 @@ def _build_registration_prompt(kb: KnowledgeBase, state: ConversationState) -> s
 1. greeting — greet and detect intent
 2. child_name — ask for child's full name
 3. child_dob — ask for date of birth; validate age (indoor ≥2 yrs, outdoor ≥2.5 yrs)
-4. trial_day — ask if child completed a Schnuppertag; if not, explain requirement and provide contact info
-5. playgroup_selection — present options, collect type(s) and day(s)
+4. playgroup_selection — present options, collect type(s) and day(s)
+5. trial_day — ask if child completed a Schnuppertag; if not, provide the correct group leader contact based on selected playgroup
 6. special_needs — ask about special needs / allergies / medical conditions
 7. parent_contact — name, street address, postal code, city, phone, email
 8. emergency_contact — emergency contact name and phone
