@@ -77,6 +77,68 @@ _WELCOME_DE = (
 
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
+# Human-readable step labels for the resume summary
+_STEP_LABELS_DE = {
+    "email_first": "Beginn",
+    "greeting": "Begrüssung",
+    "child_name": "Name des Kindes",
+    "child_dob": "Geburtsdatum des Kindes",
+    "playgroup_selection": "Spielgruppenauswahl",
+    "trial_day": "Schnuppertag",
+    "special_needs": "Besondere Bedürfnisse",
+    "parent_contact": "Elternkontakt",
+    "emergency_contact": "Notfallkontakt",
+    "confirmation": "Bestätigung",
+    "complete": "Abgeschlossen",
+}
+
+_CHANNEL_LABELS_DE = {
+    "chat": "Web-Chat",
+    "email": "E-Mail",
+}
+
+
+def _build_resume_summary(existing: ConversationState) -> str:
+    """Build a human-readable resume message for a found incomplete session.
+
+    Shows the step reached and which channel the previous session used,
+    so the parent understands they can continue cross-channel.
+    """
+    step_label = _STEP_LABELS_DE.get(existing.flow_step, existing.flow_step)
+    channel_label = _CHANNEL_LABELS_DE.get(existing.channel, existing.channel)
+    child_name = existing.registration.child.full_name
+
+    lines = [
+        "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden!",
+        f"Du hast zuletzt über den {channel_label} mit uns gesprochen und warst beim Schritt: {step_label}.",
+    ]
+    if child_name:
+        lines.append(f"Die Anmeldung ist für: {child_name}.")
+    lines.append("Wir können dort weitermachen, wo du aufgehört hast. Lass uns fortfahren.")
+    return "\n\n".join(lines)
+
+
+def _build_completed_summary(existing: ConversationState) -> str:
+    """Build a human-readable message for a found completed registration."""
+    channel_label = _CHANNEL_LABELS_DE.get(existing.channel, existing.channel)
+    child_name = existing.registration.child.full_name
+    playgroup_types = existing.registration.booking.playgroup_types
+
+    lines = [
+        "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert.",
+    ]
+    if child_name:
+        lines.append(f"Kind: {child_name}.")
+    if playgroup_types:
+        type_labels = {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"}
+        types_str = " und ".join(type_labels.get(t, t) for t in playgroup_types)
+        lines.append(f"Spielgruppe: {types_str}.")
+    lines.append(
+        f"Diese Anmeldung wurde über den {channel_label} eingereicht. "
+        "Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!"
+    )
+    return "\n\n".join(lines)
+
 
 # ---------------------------------------------------------------------------
 # Chainlit lifecycle handlers
@@ -108,6 +170,7 @@ async def on_chat_start() -> None:
     session_id = str(uuid.uuid4())
     state = ConversationState(conversation_id=session_id)
     state.flow_step = "email_first"
+    state.channel = "chat"
     state.resume_token = "".join(
         secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6)
     )
@@ -137,9 +200,10 @@ async def on_message(message: cl.Message) -> None:
         if email_match:
             email = email_match.group().lower()
             state.parent_email = email
+            state.channel = "chat"
             existing_state = _store.find_by_email(email)
             if existing_state and not existing_state.completed:
-                # Resume existing incomplete registration
+                # Resume existing incomplete registration (possibly from email channel)
                 current_session_id = state.conversation_id
                 current_messages = state.messages
                 current_token = state.resume_token
@@ -151,23 +215,17 @@ async def on_message(message: cl.Message) -> None:
                 state.conversation_id = current_session_id
                 state.messages = current_messages
                 state.resume_token = current_token or existing_state.resume_token
-                reply = (
-                    "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden! "
-                    "Wir können dort weitermachen, wo du aufgehört hast.\n\n"
-                    "Lass uns fortfahren."
-                )
+                # Keep channel as "chat" since we're continuing in the chat channel
+                state.channel = "chat"
+                reply = _build_resume_summary(existing_state)
                 state.messages.append(ChatMessage(role="assistant", content=reply))
                 _store.save(state)
                 cl.user_session.set("state", state.to_dict())
                 await cl.Message(content=reply).send()
                 return
             elif existing_state and existing_state.completed:
-                # Registration already completed
-                reply = (
-                    "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert. "
-                    "Falls du den Status sehen möchtest oder ein weiteres Kind anmelden willst, "
-                    "sag mir einfach Bescheid!"
-                )
+                # Registration already completed — show status with channel info
+                reply = _build_completed_summary(existing_state)
                 state.completed = existing_state.completed
                 state.registration = existing_state.registration
                 state.flow_step = "complete"

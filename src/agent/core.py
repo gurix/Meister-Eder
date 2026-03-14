@@ -69,16 +69,35 @@ class EmailAgent:
 
         # Load or create conversation state — keyed by email address
         state = self._store.load(email_key)
+        cross_channel_resume = False
+        previous_channel = "email"
         if state is None:
             state = ConversationState(
                 conversation_id=email_key,
                 parent_email=email_key,
             )
+            state.channel = "email"
+        else:
+            # Detect cross-channel resume: if the stored state was last touched by chat
+            if state.channel == "chat" and not state.completed:
+                cross_channel_resume = True
+                previous_channel = "chat"
+            state.channel = "email"
 
         now = datetime.now(timezone.utc).isoformat()
         state.last_activity = now
         if inbound_message_id:
             state.last_inbound_message_id = inbound_message_id
+
+        # Inject a cross-channel context note as a system hint in the message text
+        # so the LLM knows the parent is continuing from the web chat.
+        if cross_channel_resume and previous_channel == "chat":
+            channel_note = (
+                "[System: Diese Anmeldung wurde über den Web-Chat begonnen und wird nun per E-Mail fortgesetzt. "
+                f"Der Fortschritt ist erhalten (aktueller Schritt: {state.flow_step}). "
+                "Begrüsse die Eltern und erwähne kurz, dass du ihre Chat-Session gefunden hast und sie nahtlos fortfahren können.]\n\n"
+            )
+            message_text = channel_note + message_text
 
         # Append the user's message to history
         state.messages.append(ChatMessage(role="user", content=message_text))

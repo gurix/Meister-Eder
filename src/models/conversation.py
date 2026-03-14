@@ -40,6 +40,10 @@ class ConversationState:
     loop_escalated: bool = False
     # Short code for resuming a conversation (included in parent confirmation email).
     resume_token: str = ""
+    # Channel that last updated this conversation: "chat" or "email".
+    # Used for cross-channel resume messages so the agent can tell the parent
+    # which channel they were using before (e.g. "you started via web chat").
+    channel: str = "chat"
 
     def to_dict(self) -> dict:
         return {
@@ -61,6 +65,7 @@ class ConversationState:
             "last_inbound_message_id": self.last_inbound_message_id,
             "loop_escalated": self.loop_escalated,
             "resume_token": self.resume_token,
+            "channel": self.channel,
         }
 
     @classmethod
@@ -87,4 +92,5 @@ class ConversationState:
         state.last_inbound_message_id = data.get("last_inbound_message_id", "")
         state.loop_escalated = data.get("loop_escalated", False)
         state.resume_token = data.get("resume_token", "")
+        state.channel = data.get("channel", "chat")
         return state
