@@ -282,3 +282,72 @@ class TestApplyUpdates:
 
     def test_ignores_unknown_keys(self, agent, fresh_state):
         agent._apply_updates(fresh_state, {"unknown.key": "value"})  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# Email channel: resume_token passed to notify_parent (Bug fix TDD)
+# ---------------------------------------------------------------------------
+
+
+class TestEmailChannelResumeToken:
+    """When a registration is completed via the email channel, notify_parent
+    must receive a non-empty resume_token so the confirmation email contains
+    the resume code the parent can use to continue via web chat."""
+
+    def test_notify_parent_called_with_resume_token_in_email_channel(
+        self, agent, mock_store, mock_notifier, complete_registration
+    ):
+        """notify_parent must be called with a non-empty resume_token when
+        the email channel completes a registration."""
+        state = ConversationState(
+            conversation_id="anna.muster@example.com",
+            parent_email="anna.muster@example.com",
+        )
+        state.channel = "email"
+        state.registration = complete_registration
+        mock_store.load.return_value = state
+
+        with patch("src.llm.complete", return_value=COMPLETION_LLM_REPLY):
+            agent.process_message("anna.muster@example.com", "Ja, alles korrekt")
+
+        mock_notifier.notify_parent.assert_called_once()
+        call_kwargs = mock_notifier.notify_parent.call_args
+        resume_token_value = (
+            call_kwargs.kwargs.get("resume_token")
+            if call_kwargs.kwargs
+            else call_kwargs[1].get("resume_token")
+        )
+        assert resume_token_value, (
+            "notify_parent was called without a resume_token in the email channel"
+        )
+
+    def test_email_channel_generates_resume_token_when_state_has_none(
+        self, agent, mock_store, mock_notifier, complete_registration
+    ):
+        """A brand-new email conversation (no prior state) must get a
+        resume_token generated before notify_parent is called."""
+        state = ConversationState(
+            conversation_id="new.parent@example.com",
+            parent_email="new.parent@example.com",
+        )
+        state.channel = "email"
+        state.resume_token = ""  # explicitly empty — new conversation
+        state.registration = complete_registration
+        mock_store.load.return_value = state
+        mock_store.save_registration.return_value = ("new.parent@example.com", 1)
+
+        with patch("src.llm.complete", return_value=COMPLETION_LLM_REPLY):
+            agent.process_message("new.parent@example.com", "Ja, alles korrekt")
+
+        call_kwargs = mock_notifier.notify_parent.call_args
+        resume_token_value = (
+            call_kwargs.kwargs.get("resume_token")
+            if call_kwargs.kwargs
+            else call_kwargs[1].get("resume_token")
+        )
+        assert resume_token_value, (
+            "A new email conversation must generate a resume_token before sending confirmation"
+        )
+        assert len(resume_token_value) == 6, (
+            f"Expected 6-char token, got: {resume_token_value!r}"
+        )

@@ -1,6 +1,8 @@
 """EmailAgent — the channel-agnostic conversation orchestrator."""
 
 import logging
+import secrets
+import string
 from datetime import datetime, timezone
 
 from ..models.conversation import ConversationState, ChatMessage
@@ -233,6 +235,15 @@ class EmailAgent:
 
         if is_complete and not state.completed:
             state.completed = True
+            # Ensure a resume_token exists — email conversations may not have
+            # one yet because token generation previously only happened in
+            # chat_app.py.  Generate one here so the confirmation email
+            # always contains a valid resume code.
+            if not state.resume_token:
+                state.resume_token = "".join(
+                    secrets.choice(string.ascii_uppercase + string.digits)
+                    for _ in range(6)
+                )
             email_key, version = self._store.save_registration(state)
             try:
                 self._notifier.notify_admin(
@@ -248,6 +259,7 @@ class EmailAgent:
                 self._notifier.notify_parent(
                     registration=state.registration,
                     language=state.language,
+                    resume_token=state.resume_token,
                 )
             except Exception:
                 logger.exception("Failed to send parent confirmation for %s", email_key)
