@@ -20,8 +20,6 @@ Environment variables (see .env.example):
 
 import logging
 import re
-import secrets
-import string
 import uuid
 from datetime import datetime, timezone
 
@@ -37,6 +35,7 @@ from src.models.registration import RegistrationData
 from src.notifications.i18n import get_strings
 from src.notifications.notifier import AdminNotifier
 from src.storage.json_store import ConversationStore, _diff_registrations
+from src.utils.tokens import generate_resume_token
 
 logging.basicConfig(
     level=logging.INFO,
@@ -151,9 +150,7 @@ async def on_chat_start() -> None:
     state = ConversationState(conversation_id=session_id)
     state.flow_step = "email_first"
     state.channel = "chat"
-    state.resume_token = "".join(
-        secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6)
-    )
+    state.resume_token = generate_resume_token()
     # Store the welcome in history so it's replayed if the session reconnects.
     state.messages.append(ChatMessage(role="assistant", content=_WELCOME_DE))
     cl.user_session.set("state", state.to_dict())

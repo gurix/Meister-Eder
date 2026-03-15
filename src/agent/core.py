@@ -1,8 +1,6 @@
 """EmailAgent — the channel-agnostic conversation orchestrator."""
 
 import logging
-import secrets
-import string
 from datetime import datetime, timezone
 
 from ..models.conversation import ConversationState, ChatMessage
@@ -13,6 +11,7 @@ from ..storage.json_store import ConversationStore, normalize_email, _diff_regis
 from ..notifications.notifier import AdminNotifier
 from .prompts import build_system_prompt
 from .response_parser import apply_updates, fallback_message, parse_llm_response
+from ..utils.tokens import generate_resume_token
 
 logger = logging.getLogger(__name__)
 
@@ -240,10 +239,7 @@ class EmailAgent:
             # chat_app.py.  Generate one here so the confirmation email
             # always contains a valid resume code.
             if not state.resume_token:
-                state.resume_token = "".join(
-                    secrets.choice(string.ascii_uppercase + string.digits)
-                    for _ in range(6)
-                )
+                state.resume_token = generate_resume_token()
             email_key, version = self._store.save_registration(state)
             try:
                 self._notifier.notify_admin(
