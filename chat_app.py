@@ -22,6 +22,7 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 import chainlit as cl
 
@@ -35,7 +36,7 @@ from src.models.registration import RegistrationData
 from src.notifications.i18n import get_strings
 from src.notifications.notifier import AdminNotifier
 from src.storage.json_store import ConversationStore, _diff_registrations
-from src.utils.tokens import generate_resume_token
+from src.utils.tokens import EMAIL_PATTERN, generate_resume_token
 
 logging.basicConfig(
     level=logging.INFO,
@@ -75,8 +76,90 @@ _WELCOME_DE = (
     "Wie lautet deine E-Mail-Adresse?"
 )
 
-EMAIL_PATTERN = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
 _EMAIL_RE = re.compile(EMAIL_PATTERN)
+
+def _handle_email_lookup(state: ConversationState, message_content: str) -> Optional[str]:
+    """Extract email from message, look up existing state, and mutate *state* in place.
+
+    Returns the reply text to send immediately (and the caller should ``return``),
+    or ``None`` if processing should continue normally.
+
+    Responsibilities:
+    - Detect an email address in *message_content*
+    - Query the store for an existing registration under that email
+    - Merge stored registration data into *state* for cross-channel resume
+    - Build and return the appropriate reply for the parent, or None to continue
+    """
+    email_match = _EMAIL_RE.search(message_content)
+    if not email_match:
+        return None
+
+    email = email_match.group().lower()
+    state.parent_email = email
+    state.channel = "chat"
+    existing_state = _store.find_by_email(email)
+
+    if existing_state and not existing_state.completed:
+        # Resume existing incomplete registration (possibly from email channel)
+        current_session_id = state.conversation_id
+        current_messages = state.messages
+        current_token = state.resume_token
+        # Restore registration data from stored state
+        state.registration = existing_state.registration
+        state.flow_step = existing_state.flow_step
+        state.language = existing_state.language
+        state.parent_name = existing_state.parent_name
+        state.conversation_id = current_session_id
+        state.messages = current_messages
+        state.resume_token = current_token or existing_state.resume_token
+        # Keep channel as "chat" since we're continuing in the chat channel
+        state.channel = "chat"
+        return _build_resume_summary(existing_state)
+
+    if existing_state and existing_state.completed:
+        # Registration already completed — show status with channel info
+        state.completed = existing_state.completed
+        state.registration = existing_state.registration
+        state.flow_step = "complete"
+        return _build_completed_summary(existing_state)
+
+    # New registration — continue normally
+    state.flow_step = "greeting"
+    return None
+
+
+def _handle_registration_complete(state: ConversationState) -> None:
+    """Persist a newly completed registration and notify admin and parent.
+
+    Assumes ``state.completed`` has already been set to ``True`` by the caller.
+    Handles all exceptions internally so that notification failures never abort
+    the conversation.
+    """
+    try:
+        email_key, version = _store.save_registration(state)
+        _notifier.notify_admin(
+            registration=state.registration,
+            registration_id=email_key,
+            version=version,
+            conversation_id=state.conversation_id,
+            channel="chat",
+        )
+        logger.info("Registration complete for session %s", state.conversation_id)
+    except Exception:
+        logger.exception(
+            "Failed to save/notify for session %s", state.conversation_id
+        )
+    try:
+        _notifier.notify_parent(
+            registration=state.registration,
+            language=state.language,
+            resume_token=state.resume_token,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send parent confirmation for session %s", state.conversation_id
+        )
+
 
 def _build_resume_summary(existing: ConversationState) -> str:
     """Build a human-readable resume message in the parent's language.
@@ -174,49 +257,17 @@ async def on_message(message: cl.Message) -> None:
 
     # --- Handle email_first step: extract email and check for existing conversation ---
     if state.flow_step == "email_first" and state.parent_email == "":
-        email_match = _EMAIL_RE.search(message.content)
-        if email_match:
-            email = email_match.group().lower()
-            state.parent_email = email
-            state.channel = "chat"
-            existing_state = _store.find_by_email(email)
-            if existing_state and not existing_state.completed:
-                # Resume existing incomplete registration (possibly from email channel)
-                current_session_id = state.conversation_id
-                current_messages = state.messages
-                current_token = state.resume_token
-                # Restore registration data from stored state
-                state.registration = existing_state.registration
-                state.flow_step = existing_state.flow_step
-                state.language = existing_state.language
-                state.parent_name = existing_state.parent_name
-                state.conversation_id = current_session_id
-                state.messages = current_messages
-                state.resume_token = current_token or existing_state.resume_token
-                # Keep channel as "chat" since we're continuing in the chat channel
-                state.channel = "chat"
-                reply = _build_resume_summary(existing_state)
-                state.messages.append(ChatMessage(role="assistant", content=reply))
-                _store.save(state)
-                cl.user_session.set("state", state.to_dict())
-                await cl.Message(content=reply).send()
-                return
-            elif existing_state and existing_state.completed:
-                # Registration already completed — show status with channel info
-                reply = _build_completed_summary(existing_state)
-                state.completed = existing_state.completed
-                state.registration = existing_state.registration
-                state.flow_step = "complete"
-                state.messages.append(ChatMessage(role="assistant", content=reply))
-                _store.save(state)
-                cl.user_session.set("state", state.to_dict())
-                await cl.Message(content=reply).send()
-                return
-            else:
-                # New registration — continue normally
-                state.flow_step = "greeting"
-                _store.save(state)
-                cl.user_session.set("state", state.to_dict())
+        reply = _handle_email_lookup(state, message.content)
+        if reply is not None:
+            state.messages.append(ChatMessage(role="assistant", content=reply))
+            _store.save(state)
+            cl.user_session.set("state", state.to_dict())
+            await cl.Message(content=reply).send()
+            return
+        if state.parent_email:
+            # New registration path — state already mutated by _handle_email_lookup
+            _store.save(state)
+            cl.user_session.set("state", state.to_dict())
 
     # --- Build system prompt ---
     system = build_system_prompt(_kb, state)
@@ -256,30 +307,7 @@ async def on_message(message: cl.Message) -> None:
     # --- Handle registration completion ---
     if is_complete and not state.completed:
         state.completed = True
-        try:
-            email_key, version = _store.save_registration(state)
-            _notifier.notify_admin(
-                registration=state.registration,
-                registration_id=email_key,
-                version=version,
-                conversation_id=state.conversation_id,
-                channel="chat",
-            )
-            logger.info("Registration complete for session %s", state.conversation_id)
-        except Exception:
-            logger.exception(
-                "Failed to save/notify for session %s", state.conversation_id
-            )
-        try:
-            _notifier.notify_parent(
-                registration=state.registration,
-                language=state.language,
-                resume_token=state.resume_token,
-            )
-        except Exception:
-            logger.exception(
-                "Failed to send parent confirmation for session %s", state.conversation_id
-            )
+        _handle_registration_complete(state)
 
     # --- Handle post-completion update intent ---
     if state.completed and intent == "update" and any(v is not None for v in updates.values()):

@@ -1,7 +1,13 @@
-"""Token utilities for the Meister-Eder application."""
+"""Token and pattern utilities for the Meister-Eder application."""
 
 import secrets
 import string
+
+# ---------------------------------------------------------------------------
+# Shared patterns
+# ---------------------------------------------------------------------------
+
+EMAIL_PATTERN = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
 
 
 def generate_resume_token() -> str:
