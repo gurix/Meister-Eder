@@ -54,6 +54,10 @@ closing: |
   Herzliche Grüsse
   Spielgruppe Pumuckl
 
+resume_section: "Wiederaufnahme-Code"
+resume_intro: "Falls dein Gespräch unterbrochen wurde, kannst du mit diesem Code deine Anmeldung fortsetzen:"
+resume_code_label: "Code"
+
 none: "Keine"
 
 days:
@@ -64,3 +68,31 @@ days:
 types:
   indoor: "Innenspielgruppe"
   outdoor: "Waldspielgruppe"
+
+# Chat resume messages
+chat_resume_found: "Ich habe eine angefangene Anmeldung unter dieser E-Mail-Adresse gefunden!"
+chat_resume_last_step: "Du hast zuletzt über den {channel} mit uns gesprochen und warst beim Schritt: {step}."
+chat_resume_child: "Die Anmeldung ist für: {name}."
+chat_resume_continue: "Wir können dort weitermachen, wo du aufgehört hast. Lass uns fortfahren."
+chat_resume_completed: "Unter dieser E-Mail-Adresse ist bereits eine abgeschlossene Anmeldung gespeichert."
+chat_resume_child_label: "Kind: {name}."
+chat_resume_submitted_via: "Diese Anmeldung wurde über den {channel} eingereicht. Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!"
+chat_resume_channel_chat: "Web-Chat"
+chat_resume_channel_email: "E-Mail"
+
+chat_resume_playgroup_label: "Spielgruppe: {types}."
+
+email_channel_note: "[System: Diese Anmeldung wurde über den Web-Chat begonnen und wird nun per E-Mail fortgesetzt. Der Fortschritt ist erhalten (aktueller Schritt: {flow_step}). Begrüsse die Eltern und erwähne kurz, dass du ihre Chat-Session gefunden hast und sie nahtlos fortfahren können.]"
+
+chat_resume_steps:
+  email_first: "Beginn"
+  greeting: "Begrüssung"
+  child_name: "Name des Kindes"
+  child_dob: "Geburtsdatum des Kindes"
+  playgroup_selection: "Spielgruppenauswahl"
+  trial_day: "Schnuppertag"
+  special_needs: "Besondere Bedürfnisse"
+  parent_contact: "Elternkontakt"
+  emergency_contact: "Notfallkontakt"
+  confirmation: "Bestätigung"
+  complete: "Abgeschlossen"

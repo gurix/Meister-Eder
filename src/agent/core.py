@@ -8,9 +8,11 @@ from ..models.registration import RegistrationData
 from .. import llm
 from ..knowledge_base.loader import KnowledgeBase
 from ..storage.json_store import ConversationStore, normalize_email, _diff_registrations
+from ..notifications.i18n import get_strings
 from ..notifications.notifier import AdminNotifier
 from .prompts import build_system_prompt
 from .response_parser import apply_updates, fallback_message, parse_llm_response
+from ..utils.tokens import generate_resume_token
 
 logger = logging.getLogger(__name__)
 
@@ -69,16 +71,40 @@ class EmailAgent:
 
         # Load or create conversation state — keyed by email address
         state = self._store.load(email_key)
+        cross_channel_resume = False
+        previous_channel = "email"
         if state is None:
             state = ConversationState(
                 conversation_id=email_key,
                 parent_email=email_key,
             )
+            state.channel = "email"
+        else:
+            # Detect cross-channel resume: if the stored state was last touched by chat
+            if state.channel == "chat" and not state.completed:
+                cross_channel_resume = True
+                previous_channel = "chat"
+            state.channel = "email"
 
         now = datetime.now(timezone.utc).isoformat()
         state.last_activity = now
         if inbound_message_id:
             state.last_inbound_message_id = inbound_message_id
+
+        # Inject a cross-channel context note as a system hint in the message text
+        # so the LLM knows the parent is continuing from the web chat.
+        if cross_channel_resume and previous_channel == "chat":
+            s = get_strings(state.language, self._model)
+            channel_note = (
+                s.get(
+                    "email_channel_note",
+                    "[System: Diese Anmeldung wurde über den Web-Chat begonnen und wird nun per E-Mail fortgesetzt. "
+                    "Der Fortschritt ist erhalten (aktueller Schritt: {flow_step}). "
+                    "Begrüsse die Eltern und erwähne kurz, dass du ihre Chat-Session gefunden hast und sie nahtlos fortfahren können.]",
+                ).format(flow_step=state.flow_step)
+                + "\n\n"
+            )
+            message_text = channel_note + message_text
 
         # Append the user's message to history
         state.messages.append(ChatMessage(role="user", content=message_text))
@@ -214,6 +240,12 @@ class EmailAgent:
 
         if is_complete and not state.completed:
             state.completed = True
+            # Ensure a resume_token exists — email conversations may not have
+            # one yet because token generation previously only happened in
+            # chat_app.py.  Generate one here so the confirmation email
+            # always contains a valid resume code.
+            if not state.resume_token:
+                state.resume_token = generate_resume_token()
             email_key, version = self._store.save_registration(state)
             try:
                 self._notifier.notify_admin(
@@ -229,6 +261,7 @@ class EmailAgent:
                 self._notifier.notify_parent(
                     registration=state.registration,
                     language=state.language,
+                    resume_token=state.resume_token,
                 )
             except Exception:
                 logger.exception("Failed to send parent confirmation for %s", email_key)

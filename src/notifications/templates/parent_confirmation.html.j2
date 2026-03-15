@@ -95,6 +95,14 @@
     <tr><td style="padding:2px 0 8px 16px;color:#666;">{{ strings.contact_email }}</td><td><a href="mailto:{{ admin_email }}" style="color:#2e7d32;">{{ admin_email }}</a></td></tr>
   </table>
 
+  {% if resume_token %}
+  <h2 style="color:#2e7d32;border-bottom:2px solid #2e7d32;padding-bottom:4px;font-size:16px;">{{ strings.resume_section | default("Wiederaufnahme-Code", true) }}</h2>
+  <p>{{ strings.resume_intro | default("Falls dein Gespräch unterbrochen wurde, kannst du mit diesem Code deine Anmeldung fortsetzen:", true) }}</p>
+  <div style="text-align:center;margin:12px 0;">
+    <span style="display:inline-block;background:#f0f7f0;border:2px solid #2e7d32;border-radius:8px;padding:12px 24px;font-family:monospace;font-size:24px;font-weight:bold;letter-spacing:4px;color:#2e7d32;">{{ resume_token }}</span>
+  </div>
+  {% endif %}
+
   <p style="margin-top:24px;white-space:pre-line;">{{ strings.closing }}</p>
 
 </div>

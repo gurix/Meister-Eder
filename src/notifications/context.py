@@ -181,6 +181,7 @@ def build_parent_context(
     registration: RegistrationData,
     strings: dict,
     has_qr: bool = True,
+    resume_token: str = "",
 ) -> dict:
     """Build the template context for the parent confirmation email."""
     pg = registration.parent_guardian
@@ -223,4 +224,5 @@ def build_parent_context(
         "payee_street": QR_STREET,
         "payee_postal_code": QR_PCODE,
         "payee_city": QR_CITY,
+        "resume_token": resume_token,
     }

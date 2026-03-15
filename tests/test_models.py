@@ -237,3 +237,42 @@ class TestConversationStateLoopEscalated:
         }
         state = ConversationState.from_dict(data)
         assert state.loop_escalated is False
+
+
+# ---------------------------------------------------------------------------
+# ConversationState — resume_token field
+# ---------------------------------------------------------------------------
+
+
+class TestConversationStateResumeToken:
+    def test_default_resume_token_is_empty_string(self, fresh_state):
+        assert fresh_state.resume_token == ""
+
+    def test_to_dict_includes_resume_token(self, fresh_state):
+        fresh_state.resume_token = "ABC123"
+        d = fresh_state.to_dict()
+        assert "resume_token" in d
+        assert d["resume_token"] == "ABC123"
+
+    def test_from_dict_restores_resume_token(self, fresh_state):
+        fresh_state.resume_token = "XY9Z42"
+        restored = ConversationState.from_dict(fresh_state.to_dict())
+        assert restored.resume_token == "XY9Z42"
+
+    def test_from_dict_defaults_to_empty_when_key_missing(self):
+        """Older persisted conversations without the key deserialise safely."""
+        data = {
+            "conversation_id": "old@example.com",
+            "parent_email": "old@example.com",
+            "language": "de",
+            "flow_step": "greeting",
+            "registration": {},
+            "messages": [],
+            "completed": False,
+            "reminder_count": 0,
+            "last_inbound_message_id": "",
+            "loop_escalated": False,
+            # resume_token intentionally absent
+        }
+        state = ConversationState.from_dict(data)
+        assert state.resume_token == ""
