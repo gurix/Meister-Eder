@@ -8,6 +8,7 @@ from ..models.registration import RegistrationData
 from .. import llm
 from ..knowledge_base.loader import KnowledgeBase
 from ..storage.json_store import ConversationStore, normalize_email, _diff_registrations
+from ..notifications.i18n import get_strings
 from ..notifications.notifier import AdminNotifier
 from .prompts import build_system_prompt
 from .response_parser import apply_updates, fallback_message, parse_llm_response
@@ -93,10 +94,15 @@ class EmailAgent:
         # Inject a cross-channel context note as a system hint in the message text
         # so the LLM knows the parent is continuing from the web chat.
         if cross_channel_resume and previous_channel == "chat":
+            s = get_strings(state.language, self._model)
             channel_note = (
-                "[System: Diese Anmeldung wurde über den Web-Chat begonnen und wird nun per E-Mail fortgesetzt. "
-                f"Der Fortschritt ist erhalten (aktueller Schritt: {state.flow_step}). "
-                "Begrüsse die Eltern und erwähne kurz, dass du ihre Chat-Session gefunden hast und sie nahtlos fortfahren können.]\n\n"
+                s.get(
+                    "email_channel_note",
+                    "[System: Diese Anmeldung wurde über den Web-Chat begonnen und wird nun per E-Mail fortgesetzt. "
+                    "Der Fortschritt ist erhalten (aktueller Schritt: {flow_step}). "
+                    "Begrüsse die Eltern und erwähne kurz, dass du ihre Chat-Session gefunden hast und sie nahtlos fortfahren können.]",
+                ).format(flow_step=state.flow_step)
+                + "\n\n"
             )
             message_text = channel_note + message_text
 
