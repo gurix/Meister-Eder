@@ -80,6 +80,8 @@ chat_resume_submitted_via: "Diese Anmeldung wurde über den {channel} eingereich
 chat_resume_channel_chat: "Web-Chat"
 chat_resume_channel_email: "E-Mail"
 
+chat_resume_playgroup_label: "Spielgruppe: {types}."
+
 email_channel_note: "[System: Diese Anmeldung wurde über den Web-Chat begonnen und wird nun per E-Mail fortgesetzt. Der Fortschritt ist erhalten (aktueller Schritt: {flow_step}). Begrüsse die Eltern und erwähne kurz, dass du ihre Chat-Session gefunden hast und sie nahtlos fortfahren können.]"
 
 chat_resume_steps:

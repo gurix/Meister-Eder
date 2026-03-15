@@ -198,7 +198,9 @@ def _build_completed_summary(existing: ConversationState) -> str:
     if playgroup_types:
         type_map = s.get("types", {"indoor": "Innenspielgruppe", "outdoor": "Waldspielgruppe"})
         types_str = " und ".join(type_map.get(t, t) for t in playgroup_types)
-        lines.append(f"Spielgruppe: {types_str}.")
+        lines.append(
+            s.get("chat_resume_playgroup_label", "Spielgruppe: {types}.").format(types=types_str)
+        )
     lines.append(s.get("chat_resume_submitted_via", "Diese Anmeldung wurde über den {channel} eingereicht. Falls du etwas ändern oder ein weiteres Kind anmelden möchtest, sag mir einfach Bescheid!").format(channel=channel_label))
     return "\n\n".join(lines)
 
