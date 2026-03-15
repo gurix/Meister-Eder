@@ -5,14 +5,13 @@ resume token format, and list_incomplete filtering.
 """
 
 import re
-import secrets
 import string
 
 import pytest
 
 from src.models.conversation import ConversationState
 from src.storage.json_store import ConversationStore
-from src.utils.tokens import EMAIL_PATTERN
+from src.utils.tokens import EMAIL_PATTERN, generate_resume_token
 
 
 # ---------------------------------------------------------------------------
@@ -180,25 +179,19 @@ class TestEmailExtraction:
 
 class TestResumeTokenFormat:
     def test_generated_token_is_6_chars(self):
-        token = "".join(
-            secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6)
-        )
+        token = generate_resume_token()
         assert len(token) == 6
 
     def test_generated_token_valid_chars(self):
         valid_chars = set(string.ascii_uppercase + string.digits)
         for _ in range(20):
-            token = "".join(
-                secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6)
-            )
+            token = generate_resume_token()
             assert all(c in valid_chars for c in token)
 
     def test_tokens_are_unique(self):
         tokens = set()
         for _ in range(100):
-            token = "".join(
-                secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6)
-            )
+            token = generate_resume_token()
             tokens.add(token)
         # With 36^6 possible tokens, 100 should all be unique
         assert len(tokens) == 100
