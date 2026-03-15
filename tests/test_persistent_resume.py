@@ -10,6 +10,7 @@ import string
 
 import pytest
 
+from chat_app import EMAIL_PATTERN
 from src.models.conversation import ConversationState
 from src.storage.json_store import ConversationStore
 
@@ -153,7 +154,7 @@ class TestCompletedConversation:
 
 
 class TestEmailExtraction:
-    EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+    EMAIL_RE = re.compile(EMAIL_PATTERN)
 
     def test_extracts_email_from_german_message(self):
         msg = "Meine E-Mail ist anna.muster@example.com, danke!"

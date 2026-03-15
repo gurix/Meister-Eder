@@ -75,7 +75,8 @@ _WELCOME_DE = (
     "Wie lautet deine E-Mail-Adresse?"
 )
 
-_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+EMAIL_PATTERN = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
+_EMAIL_RE = re.compile(EMAIL_PATTERN)
 
 def _build_resume_summary(existing: ConversationState) -> str:
     """Build a human-readable resume message in the parent's language.
