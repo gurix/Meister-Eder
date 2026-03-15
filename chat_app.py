@@ -316,6 +316,11 @@ async def on_message(message: cl.Message) -> None:
     # --- Handle status_query intent ---
     if intent == "status_query" and state.completed:
         logger.info("Status query for session %s", state.conversation_id)
+        # TODO: send a structured status summary back to the parent — e.g. show
+        # the registered child's name, selected playgroup days, and next steps
+        # (fee payment, trial day confirmation).  For now the LLM reply_text
+        # already covers basic status questions; a dedicated handler would allow
+        # a guaranteed consistent response independent of LLM output.
 
     # --- Handle resend_confirmation intent ---
     if intent == "resend_confirmation" and state.completed:
